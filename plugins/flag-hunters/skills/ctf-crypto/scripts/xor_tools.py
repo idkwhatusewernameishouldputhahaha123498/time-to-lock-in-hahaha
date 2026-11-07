@@ -70,11 +70,22 @@ def xor_bytes(data, key):
 
 
 def single_byte(ct, top=5):
-    """Return top candidate (key, plaintext, score) tuples."""
+    """Return top candidate (key, plaintext, score) tuples.
+
+    English frequency alone ranks short flag text (few vowels, many symbols/
+    underscores) below vowel-rich garbage, so we add structural bonuses: a decisive
+    one for an actual flag/ctf wrapper, a smaller one for brace-wrapped printable
+    text. This floats the real flag to the top where a human looks."""
     results = []
     for k in range(256):
         pt = bytes(b ^ k for b in ct)
-        results.append((k, pt, english_score(pt)))
+        sc = english_score(pt)
+        low = pt.lower()
+        if b"flag{" in low or b"ctf{" in low:
+            sc += 100.0                                   # the giveaway
+        elif b"{" in pt and b"}" in pt and all(32 <= c < 127 for c in pt):
+            sc += 3.0                                     # plausible wrapped flag
+        results.append((k, pt, sc))
     results.sort(key=lambda r: r[2], reverse=True)
     return results[:top]
 

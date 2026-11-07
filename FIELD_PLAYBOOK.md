@@ -166,3 +166,9 @@ offline before submitting** — don't burn attempts.
 ## TIME DISCIPLINE (finals timed; fewer hints score higher)
 Fast path + top-2 moves (~8–10 min) → hint 1 → focused push → hint 2 → hint 3 only if worth it.
 Bank easy flags first; park hard ones and return. Note what you've ruled out so a hint snaps in.
+
+---
+*This is a condensed, paste-anywhere view. The maintained source of truth is the repo's
+`ctf-triage/references/clue-first.md` (full methodology + war stories); update that first, then
+regenerate this. Clue-first is a prior, not a law — if ~10 min of clue-hunting finds no thread on
+a hard challenge, switch to real technique.*

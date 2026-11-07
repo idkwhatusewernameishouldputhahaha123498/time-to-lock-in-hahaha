@@ -42,7 +42,20 @@ the story/visual novel, one running specialist scripts) and sync to the board.
 Sweep in roughly this order — cheap and high-yield first. Read filenames and folder names as
 clues (the author chose them).
 
-**Home & obvious surfaces**
+**First, identify what the "victim's computer" actually is.** The commands below assume a
+unix-like shell, but the finals environment may not be one — adapt before typing:
+- **Linux / macOS shell** → use the commands below as-is.
+- **Windows** → `dir /a` (incl. hidden), `%USERPROFILE%\Desktop|Documents|Downloads`, Recycle
+  Bin, browser profiles under `%LOCALAPPDATA%`, `%APPDATA%` app data, PowerShell
+  `Get-ChildItem -Force -Recurse`, `Get-Content (Get-PSReadlineOption).HistorySavePath`,
+  Event Viewer, registry Run keys. The *goals* (history, accounts, hidden/misdirected files) are
+  identical; only the paths/commands change.
+- **A simulated in-game OS or a pure web app (no terminal)** → "enumerate" means click every
+  menu, file/icon, app, inbox, note and settings pane; read the in-game UI's page source and
+  `localStorage`/cookies; use any in-world search. The forensic *instinct* transfers even when
+  no shell exists — don't assume you'll get one.
+
+**Home & obvious surfaces (unix-like; translate per the above)**
 ```bash
 ls -la ~ ~/Desktop ~/Documents ~/Downloads ~/Pictures ~/Music ~/Videos 2>/dev/null
 ls -la ~/.* 2>/dev/null                       # dotfiles / hidden config

@@ -81,7 +81,12 @@ preflight_check.sh / setup/install.sh
 `zerowidth_decode.py`, `log_filter.py`, `spectrogram.py`, `image_amplify.py`, `secfetch_replay.py`,
 `angr_template.py`, `pwn_template.py`, `decode_cascade.py`.
 
-## Practice before finals (13 Nov)
-1. Confirm it reproduces the **already-solved** challenges in `~/CTF/*` fast (the sanity check).
-2. Run it on fresh public challenges (picoCTF-style) to tune speed, triage accuracy, hint
-   discipline. The arsenal improves as you add new war stories to `references/clue-first.md`.
+## Testing & practice
+- **Regression harness (committed):** `bash tests/run_tests.sh` — self-contained checks that the
+  bundled scripts still work, using generated fixtures (no challenge files needed). Run it after
+  any edit. The plugin/marketplace also validate with `claude plugin validate .`.
+- **Blind capability test:** `tests/BLIND_RESULTS.md` records how the arsenal did on fresh,
+  previously-unseen public challenges — the honest measure (not re-solving challenges we already
+  had the answers to).
+- **Keep improving it:** add each new solve as a war story in `references/clue-first.md` (the
+  single source of truth that `playbook.md` and `FIELD_PLAYBOOK.md` condense).

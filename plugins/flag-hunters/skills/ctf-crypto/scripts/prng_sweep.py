@@ -258,8 +258,7 @@ def main(argv):
             extras.append(f"%100={v % 100}")
             if extras:
                 line += "   (" + " ".join(extras) + ")"
-            if grep is not None and (v == grep or (mod and v % mod == grep)
-                                     or v % 100 == grep):
+            if grep is not None and (v == grep or (mod and v % mod == grep)):
                 line += "   <<< MATCH"
                 hits.append((name, idx, v))
             print(line)

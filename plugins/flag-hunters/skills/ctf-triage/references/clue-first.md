@@ -54,6 +54,16 @@ Before brute-forcing a large space, STOP and re-read. The clue almost always shr
 something tiny (a handful of dictionary entries, one seed, one parameter). If you must brute,
 brute the **small, structured** space the clue defines, not the raw keyspace.
 
+### 6. Know when there is NO clue — escalate to real technique
+Clue-first is a **prior, not a law**. Prelims were beginner challenges where a clue almost always
+existed; the finals are harder and some challenges demand genuine work — real cryptanalysis, a
+multi-step web/exploit chain, reversing the binary, building an exploit. If **~10 minutes** of
+artifact-mining yields no thread, stop hunting for a trick and switch to the specialist skill's
+core method, treating it as a real problem. The failure mode this prevents: circling a hard
+challenge for a cute clue that was never there while the clock runs out. Both failure modes are
+real — brute-forcing when a clue exists, and clue-hunting when none does — so read which situation
+you're in.
+
 ---
 
 ## War-story pattern library (solved challenges → reusable moves)

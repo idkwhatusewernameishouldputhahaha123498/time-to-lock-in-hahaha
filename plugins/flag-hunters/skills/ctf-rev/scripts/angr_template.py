@@ -111,17 +111,17 @@ def main():
     # ---- Choose the input channel: STDIN (default) or ARGV -------------------
     if args.argv:
         # Input arrives as argv[1]. Many crackmes: ./chall <key>
-        state = proj.factory.full_init_state(
-            args=[args.binary, sym_input],
-            add_options=angr.options.unicorn,  # speed; drop if it misbehaves
-        )
+        # NOTE: we do NOT enable options.unicorn here. Unicorn accelerates
+        # *concrete* execution; with fully-symbolic input it rarely helps and can
+        # misbehave. Add `add_options=angr.options.unicorn` only if a binary has a
+        # heavy concrete pre-amble and you've confirmed it speeds things up.
+        state = proj.factory.full_init_state(args=[args.binary, sym_input])
     else:
         # Input arrives on stdin. Passing the BVS as `stdin` makes angr read
         # exactly these symbolic bytes (handles scanf/fgets/read).
         state = proj.factory.full_init_state(
             args=[args.binary],
             stdin=sym_input,
-            add_options=angr.options.unicorn,
         )
 
     # Optional: force every byte to printable ASCII. Turn on if the solver

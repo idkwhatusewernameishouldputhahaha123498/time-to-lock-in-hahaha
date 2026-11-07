@@ -2,17 +2,21 @@
 """image_amplify.py -- reveal content hidden in a "blank"/washed-out/stego image.
 
 Usage:
-    python3 -I image_amplify.py <image> [tolerance]
+    python3 -I image_amplify.py <image> [tolerance] [--outdir DIR] [--all]
 
 <image>      PNG/JPG/BMP/GIF/TIFF... anything Pillow can open.
 [tolerance]  int 0..254 (default 0). Widens what counts as "pure" white/black for
              the threshold views, e.g. tolerance 10 treats 245..255 as white.
+--outdir DIR write outputs to DIR instead of a sibling folder (keep a read-only
+             challenge folder clean; defaults to "<stem>_amplified/" next to input).
+--all        write ALL 8 bit-planes per channel. Default writes only the high-value
+             planes (bit 0,1,7) so you review ~a dozen images, not forty.
 
-Writes a sibling folder "<stem>_amplified/" NEXT TO the input containing:
+Writes into the output folder:
   threshold_offwhite.png   pixels NOT pure white -> black   (Pixel Perfect: text at 226-254)
   threshold_offblack.png   pixels NOT pure black -> white   (text drawn just above 0)
   contrast_autocontrast.png / contrast_equalized.png        (faint low-contrast detail)
-  bitplane_<chan>_bit<n>.png  for every channel & bit 0..7  (LSB stego / bit-plane art)
+  bitplane_<chan>_bit<n>.png  high-value planes by default, all with --all
   channel_<chan>.png       each channel (+ alpha) as grayscale
 
 It ALSO reads the LSB stream (several channel/bit orders, MSB- and LSB-first) and
@@ -37,11 +41,26 @@ def main(argv):
     if len(argv) < 2 or argv[1] in ("-h", "--help"):
         print(HELP)
         return 0
-    path = os.path.abspath(argv[1])
+    outdir_opt = None
+    all_planes = False
+    positional = []
+    i = 1
+    while i < len(argv):
+        a = argv[i]
+        if a == "--outdir":
+            if i + 1 >= len(argv):
+                die("--outdir needs a directory")
+            outdir_opt = argv[i + 1]; i += 2; continue
+        if a == "--all":
+            all_planes = True; i += 1; continue
+        positional.append(a); i += 1
+    if not positional:
+        print(HELP); return 0
+    path = os.path.abspath(positional[0])
     tol = 0
-    if len(argv) >= 3:
+    if len(positional) >= 2:
         try:
-            tol = max(0, min(254, int(argv[2])))
+            tol = max(0, min(254, int(positional[1])))
         except ValueError:
             die("tolerance must be an integer 0..254")
 
@@ -63,7 +82,8 @@ def main(argv):
     print("[*] %s  mode=%s size=%sx%s" % (path, img.mode, img.width, img.height))
 
     stem = os.path.splitext(os.path.basename(path))[0]
-    outdir = os.path.join(os.path.dirname(path), stem + "_amplified")
+    outdir = (os.path.abspath(outdir_opt) if outdir_opt
+              else os.path.join(os.path.dirname(path), stem + "_amplified"))
     os.makedirs(outdir, exist_ok=True)
     written = []
 
@@ -100,8 +120,10 @@ def main(argv):
         save("channel_%s.png" % name, ch)
 
     # (b) BIT-PLANES ----------------------------------------------------------
+    # Default to the high-value planes (LSBs + MSB); --all writes every plane.
+    bit_list = range(8) if all_planes else (0, 1, 7)
     for name, ch in chans:
-        for bit in range(8):
+        for bit in bit_list:
             plane = ((ch >> bit) & 1) * 255
             save("bitplane_%s_bit%d.png" % (name, bit), plane)
 

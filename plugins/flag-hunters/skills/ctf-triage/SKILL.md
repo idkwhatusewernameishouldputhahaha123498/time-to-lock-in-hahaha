@@ -88,6 +88,12 @@ artifact**. Internalize these principles (full detail + war stories in
   ordered name fragments → turn each phrase directly into a parameter or one regex.
 - **Brute force is the LAST resort**, not the first. If you're about to brute a large space,
   stop: you've probably missed the clue. Re-read the prompt and the artifact.
+- **But don't loop on a clue that isn't there.** Clue-first is a *prior, not a guarantee*. The
+  finals are harder than prelims and some challenges have **no leaked artifact** — the intended
+  path is genuine technique (real cryptanalysis, a full web/exploit chain, reversing the binary).
+  Rule of thumb: ~10 min of artifact-mining with no thread → switch to the specialist's core
+  method and treat it as a real problem, not a riddle. Mistaking a hard challenge for a trick
+  burns the clock.
 
 ---
 
