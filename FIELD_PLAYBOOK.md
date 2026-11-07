@@ -13,7 +13,9 @@ The intended solve is a **human clue** or a **leaked artifact**. Find that; don'
 1. **Mine the wrapper before attacking the content.** Keys/seeds/passwords leak in filenames,
    metadata (EXIF, PDF dates, author), timestamps, object IDs, zip comments, trailing bytes.
 2. **Misdirection = signpost.** "don't look", "not important", `Trash/`, `dontlook/` → look there.
-3. **Error-type = oracle.** Testing candidates: the one that fails *differently* is often right.
+3. **Error-type = oracle.** Testing candidates: success is the usual tell; else the one that
+   fails with a different error *type* or at a *later stage* is often right (same error type,
+   different message = noise).
 4. **Translate prose to parameters literally.** "8 rails", "move up 5", "seconds :02", ordered
    name fragments → exact param / one regex.
 5. **Brute force is LAST.** About to brute a big space? You missed the clue. Re-read.
@@ -82,7 +84,7 @@ Ambiguous? Try the top 2 in parallel. Clear plain-sight flag? `grep flag{` wins 
 - **Any file:** `file`, `binwalk`, `exiftool`, `strings|grep flag`, and check bytes **after** the
   logical EOF (data appended past PNG IEND / JPEG EOI).
 - **Archives:** peel nested ones recursively; dictionary-attack encrypted members and **watch the
-  error-type oracle**; AES-7z → `py7zr` (pure Python); peel zips in-memory with `zipfile` +
+  error-type oracle**; AES-7z → `py7zr` (no system 7z binary needed); peel zips in-memory with `zipfile` +
   `io.BytesIO`; grep extracted raw bytes for `flag{`. *(A 3-layer nest hid the flag in a .bin.)*
 - **pcap:** tshark/Wireshark — follow TCP stream, export objects, check HTTP/DNS/ICMP exfil, creds.
 - **Disk/memory:** `strings|grep flag`; volatility3 (pslist, cmdline, filescan, dumpfiles); mount.
@@ -137,7 +139,7 @@ Ambiguous? Try the top 2 in parallel. Clear plain-sight flag? `grep flag{` wins 
 
 ## MISC
 - **Identify the encoding by its alphabet, then cascade-decode** (nested layers are the norm):
-  base16/32/58/62/64/85/91, ascii85, uuencode, binary/octal/decimal, hex, URL%, HTML entities,
+  base16/32/58/62/64/85, ascii85, uuencode, binary/octal/decimal, hex, URL%, HTML entities,
   ROT13/47, atbash, A1Z26, baconian, morse, tap code, braille, leetspeak.
 - **Esolangs:** Brainfuck (`+-<>[].`), Whitespace (spaces/tabs), Ook, Malbolge, JSFuck
   (`[]()!+`), Piet (image), rockstar.

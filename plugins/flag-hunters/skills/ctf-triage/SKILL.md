@@ -81,9 +81,10 @@ artifact**. Internalize these principles (full detail + war stories in
   password. We'd never crack RC4; we didn't have to.)
 - **Misdirection is a signpost.** "don't look here", "nobody should read this", "these files are
   NOT important", a `Trash/` or `dontlook/` folder — the author is pointing at the answer.
-- **Error-type is an oracle.** When trying candidates against an encrypted thing, a *different*
-  error for one candidate often means it's the right one (the AES-7z that threw `Bad7zFile` for
-  every wrong password but a different error for the right one).
+- **Error-type is an oracle (read it carefully).** The real tell is usually *success*; failing
+  that, a candidate that throws a *different error type* or fails at a *later stage* than all the
+  others is likely right. Don't be fooled by wrong passwords that share one error type and differ
+  only in the message text — that's noise, not the oracle.
 - **Translate prose clues literally.** "8 rails", "move up by 5", "seconds ending in :02",
   ordered name fragments → turn each phrase directly into a parameter or one regex.
 - **Brute force is the LAST resort**, not the first. If you're about to brute a large space,

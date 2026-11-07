@@ -222,6 +222,8 @@ def main(argv):
     while i < len(rest):
         a = rest[i]
         if a in opts:
+            if i + 1 >= len(rest):
+                print(f"{a} needs a value", file=sys.stderr); return 2
             val = rest[i + 1]
             opts[a] = int(val) if a in ("--keylen", "--max") else val
             i += 2; continue

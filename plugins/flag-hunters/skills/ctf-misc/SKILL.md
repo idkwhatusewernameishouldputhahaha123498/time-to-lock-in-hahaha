@@ -53,8 +53,8 @@ hex, URL, HTML entities, morse, ROT13/47, atbash, A1Z26, reverse, and Caesar bru
 ## WHEN THE CASCADE STALLS — hand tools by shape
 
 **Esolangs** (install nothing untrusted; use known interpreters / online or node):
-- **Brainfuck** `+-<>[].,` → any bf interpreter. Ook! and "blub"/spaced variants
-  map 1:1 to bf — translate tokens then run.
+- **Brainfuck** `+-<>[].,` and **Ook!** → bundled: `python3 -I scripts/esolang.py bf
+  "<prog|->"` (or `ook` for Ook!). Step-capped so a looping program can't hang you.
 - **Whitespace** (only ` `\t\n) → `wspace`/online interpreter. `cat -A file` to see it.
 - **Malbolge / Piet** → dedicated interpreters; Piet is an **image** (npiet).
 - **JSFuck / `[]()!+` / aaencode / jjencode** → it's JavaScript. Run in a node

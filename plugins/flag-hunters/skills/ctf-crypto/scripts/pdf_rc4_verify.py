@@ -220,6 +220,8 @@ def main(argv):
     while i < len(argv):
         a = argv[i]
         if a in flags:
+            if i + 1 >= len(argv):
+                print(f"[!] {a} needs a value", file=sys.stderr); return 2
             args[a] = argv[i + 1]; i += 2; continue
         i += 1
 
@@ -229,6 +231,11 @@ def main(argv):
         print(f"# parsed PDF: O[:4]={O[:4].hex()} U[:4]={U[:4].hex()} "
               f"P={P} ID0={id0.hex()}")
     else:
+        need = [k for k in ("--O", "--U", "--P", "--id0") if k not in args]
+        if need:
+            print(f"[!] supply --pdf, or all of --O/--U/--P/--id0 "
+                  f"(missing: {', '.join(need)})", file=sys.stderr)
+            return 2
         O = _hexarg(args["--O"]); U = _hexarg(args["--U"])
         P = int(args["--P"]); id0 = _hexarg(args["--id0"])
 

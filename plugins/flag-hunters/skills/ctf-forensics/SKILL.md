@@ -53,9 +53,11 @@ the fast path comes up empty.
   the WRONG password and the RIGHT password often throw DIFFERENT errors. On an
   AES-7z with an encrypted header, every wrong password corrupts the header and
   dies the same way (e.g. a `TypeError`/`Bad7zFile`); the right one decrypts the
-  header cleanly and either succeeds or fails LATER and differently. Watch for
-  the odd-one-out instead of waiting for a clean "success". `nested_archive_peel.py`
-  prints the per-password error type so you can SEE it.
+  header cleanly and either succeeds or fails LATER and differently. Watch for a
+  SUCCESS first; failing that, the odd-one-out by error TYPE or by stage -- NOT
+  wrong passwords that merely differ in error message (that's noise; e.g. py7zr
+  1.1.4 raises `TypeError` with varying messages for every wrong password).
+  `nested_archive_peel.py` prints the per-password error type so you can SEE it.
 
 - **The flag hides in raw bytes, not nice files.** Extracted a `challenge.bin`?
   `grep -a 'flag{'` it. Do not assume it must be a `.txt`.
@@ -100,12 +102,16 @@ zipinfo -v archive.zip          # per-member encryption/flags
 # Dictionary attack hashes with john/hashcat ONLY as a last resort:
 zip2john archive.zip > h ; john --wordlist=rockyou.txt h
 ```
-- `nested_archive_peel.py` uses `py7zr` (pure-Python AES-7z) when installed, else
+- `nested_archive_peel.py` uses `py7zr` (AES-7z, no system 7z binary needed) when installed, else
   system `7z`. It DEFERS encrypted cracks until it has peeled every unencrypted
   file, so a password in `dontlook/passwords.txt` is in the wordlist before the
   `.7z` is attacked.
 - A log alongside the challenge may RULE OUT candidate passwords ("tried X, Y") -
   read it; it narrows the wordlist.
+- **No binwalk on the box?** `scripts/carve.py` is a pure-Python carver: it finds
+  embedded/appended files (a `.zip` concatenated after a PNG, nested "matryoshka"
+  image→zip→image chains), extracts them recursively, and greps each piece for a
+  flag — `python3 -I scripts/carve.py <file> [--outdir DIR]`.
 
 ## IMAGE / DOC FILE (PNG, JPG, GIF, PDF, office, audio)
 

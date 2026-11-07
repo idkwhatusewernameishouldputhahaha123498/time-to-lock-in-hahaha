@@ -7,20 +7,24 @@ character set / alphabet and try to peel them layer by layer, recursing a few
 levels deep. PRINT every intermediate or final result that contains `flag{`
 (configurable), with the chain of transforms that produced it.
 
-Pure stdlib. `python3 -I` friendly (no imports from CWD).
+Pure stdlib. `python3 -I` friendly (no imports from CWD). Bounded: a wall-clock
+--timeout and a node cap guarantee it returns even on large high-entropy input;
+cipher transforms (rot/atbash/reverse) are checked for a hit but NOT recursed
+into, so there is no combinatorial blow-up.
 
 Usage:
     python3 -I decode_cascade.py <file>
     python3 -I decode_cascade.py "<blob string>"
     cat blob.txt | python3 -I decode_cascade.py
-    python3 -I decode_cascade.py <file> --pattern 'CTF\\{' --depth 10 --all
+    python3 -I decode_cascade.py <file> --pattern 'CTF\\{' --depth 10 --timeout 20 --all
 
 Flags:
     --pattern RE   regex for a "hit" (default: flag\\{ ... \\}, case-insensitive)
     --depth N      max recursion depth (default 12)
+    --timeout S    wall-clock budget in seconds (default 20)
     --all          also print promising printable leaves even without a hit
 """
-import sys, os, re, base64, binascii, codecs, html, string
+import sys, os, re, base64, binascii, codecs, html, string, time, hashlib
 import urllib.parse as _url
 
 # ----------------------------------------------------------------------------
@@ -30,6 +34,7 @@ DEFAULT_PATTERN = re.compile(r"flag\{[^}]*\}", re.IGNORECASE)
 PRINTABLE = set(bytes(string.printable, "ascii"))
 B58_ALPH = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 B62_ALPH = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+NODE_CAP = 200000
 MORSE = {
     ".-":"A","-...":"B","-.-.":"C","-..":"D",".":"E","..-.":"F","--.":"G",
     "....":"H","..":"I",".---":"J","-.-":"K",".-..":"L","--":"M","-.":"N",
@@ -231,6 +236,10 @@ def rotn(s, n):
 
 # ----------------------------------------------------------------------------
 # Detection order: cheap/unambiguous transforms first.
+# STRUCTURAL decoders change/shrink the data and are safe to recurse into.
+# CIPHER transforms (rot/atbash/reverse) keep length+entropy, so recursing into
+# them on high-entropy input explodes combinatorially -- we apply them and check
+# for a hit, but never recurse into their output.
 # ----------------------------------------------------------------------------
 DECODERS = [
     ("url", d_url), ("html", d_html), ("morse", d_morse),
@@ -242,33 +251,44 @@ DECODERS = [
     ("rot13", d_rot13), ("rot47", d_rot47), ("atbash", d_atbash),
     ("reverse", d_reverse),
 ]
+CIPHER_NAMES = {"rot13", "rot47", "atbash", "reverse"}
 
 # ----------------------------------------------------------------------------
-# Recursive walk
+# Recursive walk (bounded by depth, a node cap, and a wall-clock deadline)
 # ----------------------------------------------------------------------------
-def walk(blob, pattern, max_depth, show_all, hits, seen, chain=(), depth=0):
+def walk(blob, st, chain=(), depth=0):
+    if time.time() > st["deadline"]:
+        st["timed_out"] = True
+        return
+    st["nodes"] += 1
+    if st["nodes"] > NODE_CAP:
+        return
     s = norm(blob)
     if s is None:
         return
+    pattern = st["pattern"]
     # Record any hit on the current layer (depth>0 means it was decoded).
     if depth > 0 and pattern.search(s):
         key = (s, chain)
-        if key not in hits:
-            hits.add(key)
+        if key not in st["hits"]:
+            st["hits"].add(key)
             print("\n[HIT] via " + " -> ".join(chain))
-            m = pattern.search(s)
-            print("  FLAG:", m.group(0))
+            print("  FLAG:", pattern.search(s).group(0))
             ctx = s if len(s) < 400 else s[:400] + "..."
             print("  text:", repr(ctx))
-        return  # flag already readable here; don't peel reversible layers further
-    if depth >= max_depth:
+        return  # flag already readable; don't peel reversible layers further
+    if depth >= st["max_depth"]:
         return
-    skey = s if len(s) <= 4096 else s[:4096]
-    if skey in seen:
+    # Full-content dedup (prefix-only dedup could not collapse high-entropy input).
+    skey = hashlib.sha1(s.encode("utf-8", "ignore")).digest()
+    if skey in st["seen"]:
         return
-    seen.add(skey)
+    st["seen"].add(skey)
 
     for name, fn in DECODERS:
+        if time.time() > st["deadline"]:
+            st["timed_out"] = True
+            return
         try:
             out = fn(s)
         except Exception:
@@ -278,16 +298,16 @@ def walk(blob, pattern, max_depth, show_all, hits, seen, chain=(), depth=0):
         outs = norm(out)
         if outs is None or outs == s or not outs:
             continue
-        # Only recurse into results that look like text (so cascades continue);
-        # but ALWAYS check the immediate result for a flag first.
         new_chain = chain + (name,)
         if pattern.search(outs):
-            walk(out, pattern, max_depth, show_all, hits, seen, new_chain, depth + 1)
-        elif is_mostly_printable(out, 0.85):
-            if show_all and depth + 1 >= 1:
+            walk(out, st, new_chain, depth + 1)
+        elif name not in CIPHER_NAMES and is_mostly_printable(out, 0.85):
+            # Only STRUCTURAL decoders recurse; cipher transforms are hit-checked
+            # above but never recursed (that was the exponential-blowup bug).
+            if st["show_all"]:
                 disp = outs if len(outs) < 120 else outs[:120] + "..."
                 print(f"  [{'->'.join(new_chain)}] {disp!r}")
-            walk(out, pattern, max_depth, show_all, hits, seen, new_chain, depth + 1)
+            walk(out, st, new_chain, depth + 1)
 
     # ROT-N brute only at shallow depth to find Caesar-shifted flags.
     if depth <= 2 and re.search(r"[A-Za-z]", s):
@@ -296,21 +316,31 @@ def walk(blob, pattern, max_depth, show_all, hits, seen, chain=(), depth=0):
             if pattern.search(r):
                 nc = chain + (f"rot{n}",)
                 key = (r, nc)
-                if key not in hits:
-                    hits.add(key)
+                if key not in st["hits"]:
+                    st["hits"].add(key)
                     print("\n[HIT] via " + " -> ".join(nc))
                     print("  FLAG:", pattern.search(r).group(0))
 
 # ----------------------------------------------------------------------------
+def _opt_value(argv, i, name):
+    if i + 1 >= len(argv):
+        sys.exit(f"[!] {name} needs a value")
+    return argv[i + 1]
+
+
 def read_input(argv):
-    args, opts = [], {"pattern": None, "depth": 12, "all": False}
+    args, opts = [], {"pattern": None, "depth": 12, "all": False, "timeout": 20.0}
     i = 0
     while i < len(argv):
         a = argv[i]
-        if a == "--pattern":
-            opts["pattern"] = argv[i + 1]; i += 2
+        if a in ("-h", "--help"):
+            print(__doc__); sys.exit(0)
+        elif a == "--pattern":
+            opts["pattern"] = _opt_value(argv, i, "--pattern"); i += 2
         elif a == "--depth":
-            opts["depth"] = int(argv[i + 1]); i += 2
+            opts["depth"] = int(_opt_value(argv, i, "--depth")); i += 2
+        elif a == "--timeout":
+            opts["timeout"] = float(_opt_value(argv, i, "--timeout")); i += 2
         elif a == "--all":
             opts["all"] = True; i += 1
         else:
@@ -333,12 +363,19 @@ def main():
         print("No input. Provide a file, a string arg, or pipe via stdin.")
         return 1
     pattern = re.compile(opts["pattern"], re.IGNORECASE) if opts["pattern"] else DEFAULT_PATTERN
-    print(f"[*] input {len(data)} chars; pattern /{pattern.pattern}/; depth {opts['depth']}")
+    print(f"[*] input {len(data)} chars; pattern /{pattern.pattern}/; "
+          f"depth {opts['depth']}; timeout {opts['timeout']}s")
     # Also try the raw blob itself (sometimes the flag is plaintext / rotated).
     if pattern.search(data):
         print("[HIT] flag present in RAW input:", pattern.search(data).group(0))
-    hits, seen = set(), set()
-    walk(data.strip(), pattern, opts["depth"], opts["all"], hits, seen)
+    st = {"pattern": pattern, "max_depth": opts["depth"], "show_all": opts["all"],
+          "hits": set(), "seen": set(), "nodes": 0,
+          "deadline": time.time() + opts["timeout"], "timed_out": False}
+    walk(data.strip(), st)
+    hits = st["hits"]
+    if st["timed_out"]:
+        print(f"\n[!] stopped at the {opts['timeout']}s timeout "
+              f"({st['nodes']} nodes explored). Narrow the input or raise --timeout.")
     if not hits:
         print("\n[!] No flag found via automatic cascade.")
         print("    Try: --all to see printable layers, --pattern 'CTF\\{', or")

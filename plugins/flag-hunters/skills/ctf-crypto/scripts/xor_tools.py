@@ -180,6 +180,8 @@ def main(argv):
     while i < len(rest):
         a = rest[i]
         if a in opts:
+            if i + 1 >= len(rest):
+                print(f"{a} needs a value", file=sys.stderr); return 2
             val = rest[i + 1]
             opts[a] = int(val) if a in ("--max", "--keylen", "--top") else val
             i += 2; continue
@@ -197,8 +199,14 @@ def main(argv):
             print(f"keylen={klen:3d}  norm_hamming={dist:.4f}")
         print("# lowest norm_hamming = most likely; then: multi --keylen N")
     elif mode == "multi":
-        klens = ([opts["--keylen"]] if opts["--keylen"]
-                 else [guess_keylen(ct, opts["--max"], 1)[0][0]])
+        if opts["--keylen"]:
+            klens = [opts["--keylen"]]
+        else:
+            g = guess_keylen(ct, opts["--max"], 1)
+            if not g:
+                print("ciphertext too short to guess key length; pass --keylen N",
+                      file=sys.stderr); return 2
+            klens = [g[0][0]]
         for klen in klens:
             key, pt = solve_multi(ct, klen)
             print(f"# keylen={klen}  key={key!r} (hex {key.hex()})")

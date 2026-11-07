@@ -52,7 +52,12 @@ echo "-- Forensics / files --"
 chk cmd binwalk  "binwalk"    "$PKG binwalk"
 chk cmd exiftool "exiftool"   "$PKG libimage-exiftool-perl  (mac: brew install exiftool)"
 chk cmd foremost "foremost"   "$PKG foremost"
-chk cmd 7z       "7z/7za"     "$PKG p7zip-full  (mac: brew install p7zip)"
+if have 7z || have 7za || have 7zz; then
+  printf "  %s[ok]%s   %s\n" "$GREEN" "$RST" "7z/7za/7zz"
+else
+  printf "  %s[--]%s   %-22s %s%s%s\n" "$RED" "$RST" "7z/7za/7zz" "$DIM" "$PKG p7zip-full  (mac: brew install p7zip)" "$RST"
+  MISSING+=("7z/7za/7zz :: $PKG p7zip-full  (mac: brew install p7zip)")
+fi
 chk cmd tshark   "tshark"     "$PKG tshark  (mac: brew install wireshark)"
 chk py  py7zr    "py7zr (AES-7z)"   "pip3 install py7zr"
 chk py  pikepdf  "pikepdf"    "pip3 install pikepdf"

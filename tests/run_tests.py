@@ -15,6 +15,7 @@ Exit code 0 = all HARD checks passed.
 """
 import os
 import re
+import io
 import subprocess
 import sys
 import tempfile
@@ -122,8 +123,18 @@ def main():
     zwf = os.path.join(tmp, "zw.txt")
     open(zwf, "w", encoding="utf-8").write("cover text " + zw + " more")
     rc, out = run([script("ctf-forensics/scripts/zerowidth_decode.py"), zwf])
-    smoke("zerowidth_decode runs; recovers standard scheme",
-          rc == 0, "recovered" if "flag{zw_ok}" in out else "ran; scheme not matched")
+    hard("zerowidth_decode recovers ZWSP/ZWNJ-encoded flag",
+         rc == 0 and "flag{zw_ok}" in out)
+
+    # 8b) decode_cascade must RETURN on large high-entropy input (regression for the
+    #     exponential-hang bug) ------------------------------------------------
+    import time as _t
+    big = base64.b64encode(os.urandom(6000)).decode()
+    t0 = _t.time()
+    rc, out = run([script("ctf-misc/scripts/decode_cascade.py"), big, "--timeout", "5"])
+    dur = _t.time() - t0
+    hard("decode_cascade returns on 6KB random input (no hang)",
+         rc == 0 and dur < 20, f"{dur:.1f}s")
 
     # 9) nested_archive_peel: plain nested zip -----------------------------
     inner = os.path.join(tmp, "inner.zip")
@@ -174,6 +185,69 @@ def main():
         smoke("spectrogram renders a wav", rc == 0)
     except ImportError:
         smoke("spectrogram (needs numpy)", True, "skipped: deps absent")
+
+    # 13) arg parsers fail CLEANLY (exit!=0, no raw traceback) on a missing value
+    argcrash = [
+        ("prng_sweep", "ctf-crypto/scripts/prng_sweep.py", ["123", "--grep"]),
+        ("xor_tools", "ctf-crypto/scripts/xor_tools.py", ["single", "ab", "--in"]),
+        ("classical_cipher", "ctf-crypto/scripts/classical_cipher.py", ["vigenere", "x", "--key"]),
+        ("flag_grep", "ctf-triage/scripts/flag_grep.py", [".", "--wrappers"]),
+        ("decode_cascade", "ctf-misc/scripts/decode_cascade.py", ["x", "--depth"]),
+        ("railfence_norails", "ctf-crypto/scripts/railfence.py", ["encode", "flag{x}"]),
+        ("pdf_rc4_nofields", "ctf-crypto/scripts/pdf_rc4_verify.py", ["--pw", "x"]),
+    ]
+    clean, detail = True, ""
+    for nm, rel, extra in argcrash:
+        rc, out = run([script(rel), *extra])
+        if rc == 0 or "Traceback (most recent call last)" in out:
+            clean = False
+            detail += f"{nm}(rc={rc},tb={'Traceback' in out}) "
+    hard("arg parsers fail cleanly (no tracebacks) on bad args", clean, detail)
+
+    # 14) flag_grep: format-agnostic (picoCTF{} not truncated) + NUL-interleaved
+    fg2 = os.path.join(tmp, "fg2"); os.makedirs(fg2, exist_ok=True)
+    open(os.path.join(fg2, "p.txt"), "w").write("x picoCTF{not_truncated} y")
+    open(os.path.join(fg2, "n.bin"), "wb").write(
+        b"".join(bytes([ch]) + b"\x00" for ch in b"picoCTF{nul_ok}"))
+    rc, out = run([script("ctf-triage/scripts/flag_grep.py"), fg2])
+    hard("flag_grep keeps full picoCTF{} (no CTF{} truncation)",
+         "picoCTF{not_truncated}" in out)
+    hard("flag_grep finds NUL-interleaved flag",
+         "picoCTF{nul_ok}" in out)
+
+    # 15) carve.py: appended ZIP after a PNG (polyglot) -> extract + flag --------
+    zbuf = io.BytesIO()
+    with zipfile.ZipFile(zbuf, "w") as z:
+        z.writestr("hidden.txt", b"flag{carved_ok}")
+    poly = os.path.join(tmp, "poly.png")
+    # minimal but real PNG header + IEND, then the appended zip
+    png = b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\x00IEND\xaeB`\x82"
+    with open(poly, "wb") as fh:
+        fh.write(png + zbuf.getvalue())
+    od = os.path.join(tmp, "carved")
+    rc, out = run([script("ctf-forensics/scripts/carve.py"), poly, "--outdir", od])
+    hard("carve.py extracts appended zip and finds flag",
+         rc == 0 and "flag{carved_ok}" in out)
+
+    # 16) rsa_attacks: known-p decrypt, and low-exponent cube root --------------
+    m = int.from_bytes(b"flag{rsa_ok}", "big")
+    p, q = (2**61 - 1), (2**89 - 1)          # Mersenne primes
+    n = p * q; e = 65537
+    c = pow(m, e, n)
+    rc, out = run([script("ctf-crypto/scripts/rsa_attacks.py"),
+                   "--n", str(n), "--e", str(e), "--c", str(c), "--p", str(p)])
+    hard("rsa_attacks decrypts with known p", "flag{rsa_ok}" in out)
+    p2, q2 = (2**127 - 1), (2**521 - 1)      # big n so m**3 < n (plain cube root)
+    n2 = p2 * q2; m2 = int.from_bytes(b"flag{low_e}", "big")
+    c2 = pow(m2, 3, n2)
+    rc, out = run([script("ctf-crypto/scripts/rsa_attacks.py"),
+                   "--n", str(n2), "--e", "3", "--c", str(c2)])
+    hard("rsa_attacks low-exponent cube root", "flag{low_e}" in out)
+
+    # 17) esolang bf: 8*8+1 = 65 = 'A' -----------------------------------------
+    rc, out = run([script("ctf-misc/scripts/esolang.py"), "bf",
+                   "++++++++[>++++++++<-]>+."])
+    hard("esolang bf interpreter runs", rc == 0 and "A" in out)
 
     # --- report -----------------------------------------------------------
     hard_fail = [r for r in results if r[1] == "HARD" and not r[2]]

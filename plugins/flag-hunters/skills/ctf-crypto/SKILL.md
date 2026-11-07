@@ -117,6 +117,11 @@ beats blind frequency analysis on short flag text.
 
 ## RSA attack suite
 
+**Bundled (pure stdlib — no gmpy2/sympy needed):** `python3 -I scripts/rsa_attacks.py
+--n <N> --e <E> --c <C>` tries, in order, given-p/q decrypt, low-exponent e-th root,
+Fermat, Pollard p-1, and Wiener; add `--p <P>` if you know a factor, or `--factordb`
+to query factordb.com. Fall through to the table below (or RsaCtfTool) if it can't crack it.
+
 Gather `n, e, c` (and any `p,q,d,dp,dq`) from the prompt or `.pem`:
 ```
 python3 -c "from cryptography.hazmat.primitives.serialization import load_pem_public_key;\
@@ -173,8 +178,10 @@ b=[d[i:i+16] for i in range(0,len(d),16)];print('dups',len(b)-len(set(b)))" ct.b
 When a secret (password, token, key) is an **output of a seeded standard PRNG**,
 and a **seed is leaked** (a timestamp, filename number, PID, "favourite number"):
 
-1. **Find the seed.** A filename `20070629000000Z` is a PDF date →
-   `date -u -d '2007-06-29' +%s` = `1183075200`. That epoch is the seed.
+1. **Find the seed.** A filename `20070629000000Z` is a PDF date → epoch `1183075200`.
+   GNU: `date -u -d '2007-06-29' +%s`. Portable (macOS/BSD `date` differs, so prefer this):
+   `python3 -c "import datetime as d;print(int(d.datetime(2007,6,29,tzinfo=d.timezone.utc).timestamp()))"`.
+   That epoch is the seed.
 2. **Reimplement the generator platform-independently** — do NOT trust local
    `rand()` (macOS rand() ≠ Linux glibc ≠ MSVC). Sweep candidates:
    ```

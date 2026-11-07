@@ -2,7 +2,7 @@
 """prng_sweep.py -- seed in, candidate outputs out.
 
 Given a numeric SEED, reimplement the common standard PRNGs *platform-independently*
-and print their first N outputs in RAW form plus a few bounded forms (% mod, ranges).
+and print their first N outputs in RAW form, plus a %100 column (and a --mod column if given).
 A human (or grep) then matches a known candidate value against the table.
 
 WHY this exists (the "Random Encounter" lesson):
@@ -22,8 +22,8 @@ Usage:
   python3 -I prng_sweep.py <seed> [count] [--mod N] [--grep VALUE]
     count     how many outputs per generator (default 8)
     --mod N   also print each raw output % N (e.g. --mod 1000000)
-    --grep V  highlight any generator/index whose raw OR bounded output == V
-              (give an integer; this is how you auto-find the matching generator)
+    --grep V  highlight any generator/index whose RAW output == V (or its --mod
+              value when --mod is given); this is how you auto-find the matching generator
 
 Everything is stdlib-only except optional numpy (used only if importable).
 """
@@ -229,8 +229,12 @@ def main(argv):
     while i < len(argv):
         a = argv[i]
         if a == "--mod":
+            if i + 1 >= len(argv):
+                sys.exit("[!] --mod needs a value")
             mod = int(argv[i + 1]); i += 2; continue
         if a == "--grep":
+            if i + 1 >= len(argv):
+                sys.exit("[!] --grep needs a value")
             grep = int(argv[i + 1], 0); i += 2; continue
         positional.append(a); i += 1
     seed = int(positional[0], 0)

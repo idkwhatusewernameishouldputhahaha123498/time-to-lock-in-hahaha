@@ -35,11 +35,15 @@ every one of these as an arrow pointing at the answer:
   "do not open"
 Enumerate those first.
 
-### 3. Error-type is an oracle
+### 3. Error-type is an oracle (but read it carefully)
 When testing candidates against something encrypted/validated, don't only look for *success* —
-watch the **shape of the failure**. If one candidate throws a *different* error than all the
-others, it's probably correct (the decryption got far enough to fail later). This turns a blind
-dictionary attack into a signal.
+watch the **shape of the failure**. Sometimes the right password throws a *different error type*
+or fails at a *later stage* than all the wrong ones, which turns a blind dictionary attack into a
+signal. Caveat: the giveaway is often simply **success**, and some libraries throw the **same
+error type with only a different message** for every wrong password — those varying messages are
+noise, not the oracle. Key on a success, a different error *type*, or a *later-stage* failure —
+never on error text that merely differs. (Verified: py7zr 1.1.4 raises `TypeError` with varying
+messages for wrong passwords and simply succeeds on the right one.)
 
 ### 4. Translate prose clues literally into parameters
 Every descriptive phrase in the prompt is usually a concrete parameter:

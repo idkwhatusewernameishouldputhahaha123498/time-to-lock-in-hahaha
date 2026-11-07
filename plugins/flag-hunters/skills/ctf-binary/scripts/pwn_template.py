@@ -35,8 +35,15 @@ HOST   = "chall.example.ctf"    # TODO: remote host from the `nc host port` prom
 PORT   = 1337                   # TODO: remote port
 LIBC   = None                   # TODO: "./libc.so.6" if you have the challenge libc, else None
 
-# context.binary auto-sets arch / bits / endianness / os from the ELF.
-context.binary = exe = ELF(BINARY, checksec=True)
+# context.binary auto-sets arch / bits / endianness / os from the ELF -- but only
+# when the file exists, so `python3 pwn_template.py` doesn't crash before you've
+# pointed BINARY at the real challenge. Fill BINARY in and it loads.
+import os as _os
+if _os.path.exists(BINARY):
+    context.binary = exe = ELF(BINARY, checksec=True)
+else:
+    exe = None
+    log.warning("%s not found -- edit BINARY/HOST/PORT before running for real." % BINARY)
 # context.arch = "amd64"        # override only if there is no local ELF (amd64/i386/aarch64/arm)
 context.log_level = "info"      # set "debug" to dump every byte sent/received
 context.terminal = ["tmux", "splitw", "-h"]   # how gdb.attach opens a window (edit for your term)

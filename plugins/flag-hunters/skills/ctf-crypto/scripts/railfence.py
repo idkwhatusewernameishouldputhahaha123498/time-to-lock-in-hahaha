@@ -107,10 +107,16 @@ def main(argv):
         if a == "--show":
             opts["--show"] = True; i += 1; continue
         if a in opts:
+            if i + 1 >= len(rest):
+                print(f"{a} needs a value", file=sys.stderr); return 2
             opts[a] = int(rest[i + 1]); i += 2; continue
         pos.append(a); i += 1
     text = _read_text(pos[0]) if pos else _read_text("-")
 
+    if mode in ("encode", "decode") and opts["--rails"] is None:
+        print(f"{mode} needs --rails N (use `brute` if you don't know the rail count)",
+              file=sys.stderr)
+        return 2
     if mode == "encode":
         print(encode(text, opts["--rails"], opts["--offset"]))
     elif mode == "decode":

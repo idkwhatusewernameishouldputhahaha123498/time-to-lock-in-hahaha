@@ -16,8 +16,9 @@ KEY TRICK (the "Linux FS" win): the password is often sitting in a sibling file
 harvesting password candidates from every text blob, and only THEN attack the
 encrypted members with the now-complete wordlist. Encrypted cracks are DEFERRED.
 
-Stdlib-first. Uses py7zr if importable (pure-Python AES-7z, no system 7z needed);
-otherwise falls back to the system `7z`/`7za`/`7zz` binary only if present.
+Stdlib-first. Uses py7zr if importable (handles AES-7z with no system 7z binary
+needed; py7zr itself uses a C AES extension, so this is "no external tool", not
+literally pure Python); otherwise falls back to a system `7z`/`7za`/`7zz` if present.
 
 Usage:
     python3 -I nested_archive_peel.py <archive> [wordlist.txt]
@@ -34,7 +35,7 @@ import tempfile
 import zipfile
 import subprocess
 
-FLAG_RE = re.compile(rb"flag\{[^}]{0,200}\}", re.IGNORECASE)
+FLAG_RE = re.compile(rb"[A-Za-z][A-Za-z0-9_]{1,24}\{[^}]{0,200}\}")  # flag{}, picoCTF{}, ...
 # Ligature-aware: some flags are hidden using U+FB02 (fl) / U+FB01 (fi).
 FLAG_LIGATURE_RE = re.compile(
     "(?:flag|ﬂag|ﬁlag)\\{[^}]{0,200}\\}".encode("utf-8"), re.IGNORECASE
@@ -88,7 +89,7 @@ def grep_flags(name: str, data: bytes):
 
 def harvest_passwords(data: bytes, pool: list):
     """Scrape plausible passwords from a small text blob into the pool."""
-    if len(data) > 200_000:
+    if len(data) > 200_000 or len(pool) > 2000:   # bound the (expensive) crack phase
         return
     try:
         text = data.decode("utf-8", "ignore")
@@ -255,7 +256,8 @@ def peel_7z(name, data, depth, enqueue, defer):
         return None
 
     defer(name, depth, attempt,
-          hint="The password whose ERROR TYPE differs from all the others is the one.")
+          hint="Right password usually SUCCEEDS; otherwise watch for a different error TYPE or a "
+               "later-stage failure. (Same error type with only a different message = noise.)")
 
 
 def peel_stream(name, data, kind, depth, enqueue):
@@ -318,7 +320,7 @@ def main(argv):
                 print("[!] blob cap reached; stopping.")
                 return
             processed += 1
-            digest = (len(data), hash(data[:8192]))
+            digest = (len(data), hash(data))   # full content, not just a header prefix
             if digest in seen:
                 continue
             seen.add(digest)
