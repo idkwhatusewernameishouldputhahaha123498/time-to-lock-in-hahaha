@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "flag-hunters-arsenal",
+  "description": "CTF solving arsenal for Flag Hunters 2026 (AFKAR, IIT Delhi - Abu Dhabi): a triage router plus per-category skills (crypto, web, forensics, stego, OSINT, reverse engineering, binary, misc) and a murder-mystery investigation workflow, tuned to solve authorized-competition challenges fast and correctly.",
+  "owner": {
+    "name": "Flag Hunters team"
+  },
+  "plugins": [
+    {
+      "name": "flag-hunters",
+      "description": "A complete CTF skill set: ctf-triage classifies a challenge and routes to ctf-crypto, ctf-web, ctf-forensics, ctf-stego, ctf-osint, ctf-rev, ctf-binary, ctf-misc, or the investigation workflow. Clue-first methodology, bundled offline scripts, flag{...} format. For organiser-scope challenges only.",
+      "author": {
+        "name": "Flag Hunters team"
+      },
+      "category": "security",
+      "source": "./plugins/flag-hunters"
+    }
+  ]
+}

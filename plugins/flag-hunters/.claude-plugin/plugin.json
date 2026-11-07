@@ -1,0 +1,8 @@
+{
+  "name": "flag-hunters",
+  "version": "0.1.0",
+  "description": "CTF solving arsenal: triage router + per-category skills (crypto, web, forensics, stego, OSINT, rev, binary, misc) + murder-mystery investigation workflow. Clue-first, fast, offline tooling bundled. Authorized-competition / organiser-scope use only. Flag format flag{...}.",
+  "author": {
+    "name": "Flag Hunters team"
+  }
+}
