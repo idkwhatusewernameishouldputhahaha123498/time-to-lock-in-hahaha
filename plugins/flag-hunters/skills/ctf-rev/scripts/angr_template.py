@@ -25,6 +25,13 @@
 import argparse
 import sys
 
+# Show usage even when angr is absent (otherwise the import guard below fires first).
+if "-h" in sys.argv or "--help" in sys.argv:
+    print("angr_template.py <binary> [--argv] [--len N] [--printable] [--by-address] "
+          "[--veritesting]\n  Symbolic-execution crackme solver. Edit FIND_ADDR/AVOID_ADDRS "
+          "or use the default --by-output mode. See the header comment in this file for details.")
+    raise SystemExit(0)
+
 try:
     import angr
     import claripy

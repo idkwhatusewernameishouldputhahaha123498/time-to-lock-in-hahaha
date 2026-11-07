@@ -237,9 +237,14 @@ def main(argv):
                 sys.exit("[!] --grep needs a value")
             grep = int(argv[i + 1], 0); i += 2; continue
         positional.append(a); i += 1
-    seed = int(positional[0], 0)
-    if len(positional) > 1:
-        count = int(positional[1])
+    if not positional:
+        sys.exit("[!] need a seed (integer); see --help")
+    try:
+        seed = int(positional[0], 0)
+        if len(positional) > 1:
+            count = int(positional[1])
+    except ValueError as e:
+        sys.exit(f"[!] bad numeric argument: {e}")
 
     print(f"# seed = {seed}  (0x{seed & U64:x})   count = {count}"
           + (f"   mod = {mod}" if mod else "")

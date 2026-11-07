@@ -188,6 +188,7 @@ def main():
 
     # 13) arg parsers fail CLEANLY (exit!=0, no raw traceback) on a missing value
     argcrash = [
+        # missing option values
         ("prng_sweep", "ctf-crypto/scripts/prng_sweep.py", ["123", "--grep"]),
         ("xor_tools", "ctf-crypto/scripts/xor_tools.py", ["single", "ab", "--in"]),
         ("classical_cipher", "ctf-crypto/scripts/classical_cipher.py", ["vigenere", "x", "--key"]),
@@ -195,6 +196,12 @@ def main():
         ("decode_cascade", "ctf-misc/scripts/decode_cascade.py", ["x", "--depth"]),
         ("railfence_norails", "ctf-crypto/scripts/railfence.py", ["encode", "flag{x}"]),
         ("pdf_rc4_nofields", "ctf-crypto/scripts/pdf_rc4_verify.py", ["--pw", "x"]),
+        # malformed positionals / values
+        ("prng_badseed", "ctf-crypto/scripts/prng_sweep.py", ["abc"]),
+        ("prng_optsonly", "ctf-crypto/scripts/prng_sweep.py", ["--mod", "5"]),
+        ("xor_badhex", "ctf-crypto/scripts/xor_tools.py", ["single", "zz", "--in", "hex"]),
+        ("xor_nofile", "ctf-crypto/scripts/xor_tools.py", ["multi", "--in", "file", "/no/such/f"]),
+        ("vig_numkey", "ctf-crypto/scripts/classical_cipher.py", ["vigenere", "hi", "--key", "123"]),
     ]
     clean, detail = True, ""
     for nm, rel, extra in argcrash:
@@ -248,6 +255,34 @@ def main():
     rc, out = run([script("ctf-misc/scripts/esolang.py"), "bf",
                    "++++++++[>++++++++<-]>+."])
     hard("esolang bf interpreter runs", rc == 0 and "A" in out)
+
+    # 18) decode_cascade honors timeout on large base58 (O(n^2) decoder is capped)
+    import time as _t2
+    t0 = _t2.time()
+    rc, out = run([script("ctf-misc/scripts/decode_cascade.py"), "1" * 300000, "--timeout", "5"])
+    dur = _t2.time() - t0
+    hard("decode_cascade bounded on 300KB base58 (no timeout overshoot)",
+         rc == 0 and dur < 20, f"{dur:.1f}s")
+
+    # 19) flag_grep: ROT-n pass must NOT flood candidates on plain text ----------
+    noise = os.path.join(tmp, "noise.txt")
+    with open(noise, "w") as fh:
+        fh.write("the quick brown fox jumps over the lazy dog " * 60 + " ab{y}")
+    rc, out = run([script("ctf-triage/scripts/flag_grep.py"), noise])
+    ncand = out.count("    <- ")
+    hard("flag_grep no ROT flood (<=3 candidates on plain text)", ncand <= 3, f"{ncand} candidates")
+
+    # 20) flag_grep: odd-length NUL (distinct from the clean UTF-16 path) --------
+    open(os.path.join(fg2, "odd.bin"), "wb").write(
+        b"".join(bytes([ch]) + b"\x00" for ch in b"picoCTF{odd_nul}")[:-1])  # drop final NUL
+    rc, out = run([script("ctf-triage/scripts/flag_grep.py"), os.path.join(fg2, "odd.bin")])
+    hard("flag_grep finds odd-length NUL flag (nul-strip path)", "picoCTF{odd_nul}" in out)
+
+    # 21) flag_grep --wrappers does not truncate picoCTF via 'ctf' --------------
+    rc, out = run([script("ctf-triage/scripts/flag_grep.py"),
+                   os.path.join(fg2, "p.txt"), "--wrappers", "ctf"])
+    hard("flag_grep --wrappers ctf does NOT match inside picoCTF",
+         "picoCTF{not_truncated}" not in out and "CTF{not_truncated}" not in out)
 
     # --- report -----------------------------------------------------------
     hard_fail = [r for r in results if r[1] == "HARD" and not r[2]]

@@ -189,7 +189,11 @@ def main(argv):
 
     raw = pos[0] if pos else sys.stdin.read().strip()
     in_mode = opts["--in"] or ("hex" if _looks_hex(raw) else "raw")
-    ct = read_input(in_mode, raw)
+    try:
+        ct = read_input(in_mode, raw)
+    except (ValueError, OSError) as e:
+        print(f"[!] could not read ciphertext ({in_mode}): {e}", file=sys.stderr)
+        return 2
 
     if mode == "single":
         for k, pt, sc in single_byte(ct, opts["--top"]):

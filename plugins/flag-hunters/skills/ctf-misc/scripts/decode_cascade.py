@@ -144,7 +144,9 @@ def d_decimal(s):
 
 def d_b58(s):
     t = strip_ws(s)
-    if not only(t, B58_ALPH) or len(t) < 4:
+    # length-capped: the big-int build is O(n^2), and the walk deadline is only
+    # checked BETWEEN decoders, so an uncapped huge base58 blob would blow the budget.
+    if not only(t, B58_ALPH) or len(t) < 4 or len(t) > 10000:
         return None
     num = 0
     for c in t:
@@ -155,8 +157,8 @@ def d_b58(s):
 
 def d_b62(s):
     t = strip_ws(s)
-    if not only(t, B62_ALPH) or len(t) < 4 or t.isdigit() or t.isalpha():
-        return None
+    if not only(t, B62_ALPH) or len(t) < 4 or len(t) > 10000 or t.isdigit() or t.isalpha():
+        return None  # length cap: O(n^2) big-int build, see d_b58
     num = 0
     for c in t:
         num = num * 62 + B62_ALPH.index(c)

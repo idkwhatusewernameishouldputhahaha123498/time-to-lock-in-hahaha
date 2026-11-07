@@ -159,7 +159,7 @@ def lsb_scan(np, rgb, alpha):
         streams.append(("A lsb xy", (alpha & 1).reshape(-1)))
 
     found = []
-    flag_re = re.compile(rb"flag\{[ -~]{1,120}?\}", re.IGNORECASE)
+    flag_re = re.compile(rb"[A-Za-z][A-Za-z0-9_]{1,24}\{[ -~]{1,120}?\}")  # flag{}, picoCTF{}, ...
     for label, bits in streams:
         bits = np.asarray(bits, dtype=np.uint8)
         for order in ("big", "little"):

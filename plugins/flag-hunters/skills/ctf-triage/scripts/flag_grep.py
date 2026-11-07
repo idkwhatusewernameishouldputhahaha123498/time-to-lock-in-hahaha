@@ -32,6 +32,9 @@ INNER = rb"\{[ -~]{0,256}?\}"          # printable ASCII inside braces, non-gree
 # Any identifier immediately followed by {...}: flag, FLAG, ctf, picoCTF, custom.
 GENERIC_RE = re.compile(rb"[A-Za-z][A-Za-z0-9_]{1,24}\{[ -~]{0,256}?\}")
 REVERSED_RE = re.compile(rb"\}[ -~]{0,256}?\{[A-Za-z][A-Za-z0-9_]{1,24}")
+# STRICT: a token ending in flag/ctf before the braces. Used for noise-prone passes
+# (ROT-n of arbitrary text contains "{" in all 25 rotations, so GENERIC would flood).
+STRICT_RE = re.compile(rb"[A-Za-z0-9_]*(?:flag|ctf)\{[ -~]{0,256}?\}", re.IGNORECASE)
 
 LIGATURES = {"ﬁ": "fi", "ﬂ": "fl", "ﬀ": "ff",
              "ﬃ": "ffi", "ﬄ": "ffl"}
@@ -56,18 +59,21 @@ def _rot(text, n):
 
 
 def flag_regexes(wrappers):
-    """If wrappers given, restrict to `<wrapper>{...}`; else match any word{...}."""
+    """If wrappers given, restrict to `<wrapper>{...}`; else match any word{...}.
+    In restrict mode the wrapper is anchored with a negative look-behind so a short
+    wrapper (ctf) does NOT match inside a longer one (picoCTF) and truncate it."""
     if wrappers:
-        pats = [re.compile(re.escape(w.encode()) + INNER, re.IGNORECASE) for w in wrappers]
+        pats = [re.compile(rb"(?<![A-Za-z0-9_])" + re.escape(w.encode()) + INNER, re.IGNORECASE)
+                for w in wrappers]
     else:
         pats = [GENERIC_RE]
     pats.append(REVERSED_RE)
     return pats
 
 
-def hits(data: bytes, label: str, found: dict):
+def hits(data: bytes, label: str, found: dict, pats=None):
     """Record flag-shaped matches. `found` maps match-text -> first label seen."""
-    for pat in PATS:
+    for pat in (pats if pats is not None else PATS):
         for m in pat.finditer(data):
             try:
                 txt = m.group(0).decode("latin-1")
@@ -128,7 +134,9 @@ def decode_pass(data: bytes, label: str, found: dict, deep: bool):
     for n in range(1, 26):
         rot = _rot(text, n)
         if "{" in rot:
-            hits(rot.encode("latin-1", "ignore"), label + f":rot{n}", found)
+            # STRICT: every rotation of arbitrary text still contains "{", so match
+            # only rotations that reveal a real flag/ctf wrapper (no 25x flood).
+            hits(rot.encode("latin-1", "ignore"), label + f":rot{n}", found, pats=[STRICT_RE])
 
 
 def leet_pass(data: bytes, label: str, leet_guesses: dict):

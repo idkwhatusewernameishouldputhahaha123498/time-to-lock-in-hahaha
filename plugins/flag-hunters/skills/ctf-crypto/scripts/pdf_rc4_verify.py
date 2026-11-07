@@ -33,7 +33,8 @@ Usage:
   # sweep a candidate list (one per line) against a PDF, print the winner:
   python3 -I pdf_rc4_verify.py --pdf secret.pdf --wordlist cands.txt
 
-VALIDATE THE VERIFIER before trusting it (make your own known-answer sample):
+VALIDATE THE VERIFIER before trusting it (make your own known-answer sample;
+this validation step needs `pip install pikepdf` - the verifier ITSELF needs only stdlib):
   >>> import pikepdf
   >>> pdf = pikepdf.open('plain.pdf')                 # any unencrypted pdf
   >>> pdf.save('enc.pdf', encryption=pikepdf.Encryption(

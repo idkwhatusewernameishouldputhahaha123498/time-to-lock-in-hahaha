@@ -245,8 +245,8 @@ def main(argv):
     elif mode == "baconian":
         print(baconian_decode(text))
     elif mode == "vigenere":
-        if not opts["--key"]:
-            print("vigenere needs --key KEY", file=sys.stderr); return 2
+        if not opts["--key"] or not any(c.isalpha() for c in opts["--key"]):
+            print("vigenere needs --key with letters (A-Z)", file=sys.stderr); return 2
         print(vigenere_decrypt(text, opts["--key"]))
     elif mode == "vig-kasiski":
         for klen, ioc in kasiski_keylen(text, opts["--max"])[:8]:

@@ -32,7 +32,8 @@ SIGS = [
     ("png",  b"\x89PNG\r\n\x1a\n", "png"),
     ("jpg",  b"\xff\xd8\xff",      "jpg"),
     ("gif",  b"GIF8",              "gif"),
-    ("bmp",  b"BM",                "bmp"),
+    # NOTE: BMP's 2-byte "BM" magic is omitted - it matches random data constantly
+    # and produced ~2x-input noise. Add it back only if you specifically expect BMPs.
     ("zip",  b"PK\x03\x04",        "zip"),
     ("gzip", b"\x1f\x8b\x08",      "gz"),
     ("bzip2", b"BZh",              "bz2"),
@@ -104,6 +105,12 @@ def carve(data, outdir, depth, maxdepth, prefix, tree, flags):
             continue
         seen_spans.add((off, end))
         blob = data[off:end]
+        if len(blob) < 64:
+            continue                      # too small to be a real embedded file
+        # The whole host file at offset 0 is not itself a finding, UNLESS it's a
+        # container we can recurse into. Embedded/appended pieces (off>0) always matter.
+        if off == 0 and name not in ("zip", "gzip", "bzip2", "xz"):
+            continue
         note = "" if off == 0 else "  (APPENDED/embedded - not at offset 0)"
         fn = os.path.join(outdir, f"{prefix}off{off}_{name}.{ext}")
         try:

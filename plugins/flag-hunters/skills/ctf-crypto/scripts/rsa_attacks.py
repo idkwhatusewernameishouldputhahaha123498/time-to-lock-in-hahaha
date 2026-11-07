@@ -63,7 +63,7 @@ def small_e_root(n, e, c):
     return None
 
 
-def fermat(n, rounds=5_000_000):
+def fermat(n, rounds=1_000_000):
     """Factor n when p and q are close (n = a**2 - b**2)."""
     a = iroot(n, 2)
     if a * a < n:
@@ -186,20 +186,14 @@ def main(argv):
         if r:
             return finish(r[0], r[1], "factordb")
 
+    # Cheapest / most-specific attacks first; Fermat's big loop runs LAST so a
+    # Wiener- or Pollard-solvable key doesn't pay the Fermat tax.
     if c is not None:
         m = small_e_root(n, e, c)
         if m is not None:
             print(f"[+] low-exponent e-th root worked (m**{e} < n or c+k*n).")
             print(f"[+] m = {m}\n[+] bytes = {to_bytes(m)!r}")
             return 0
-
-    r = fermat(n)
-    if r:
-        return finish(r[0], r[1], "Fermat (close primes)")
-
-    r = pollard_pm1(n)
-    if r:
-        return finish(r[0], r[1], "Pollard p-1")
 
     d = wiener(n, e)
     if d is not None:
@@ -208,6 +202,15 @@ def main(argv):
             m = pow(c, d, n)
             print(f"[+] m = {m}\n[+] bytes = {to_bytes(m)!r}")
         return 0
+
+    r = pollard_pm1(n)
+    if r:
+        return finish(r[0], r[1], "Pollard p-1")
+
+    print("[*] trying Fermat (up to 1e6 rounds; only finds CLOSE primes)...", file=sys.stderr)
+    r = fermat(n)
+    if r:
+        return finish(r[0], r[1], "Fermat (close primes)")
 
     print("[-] none of the built-in attacks worked. Try: --factordb, RsaCtfTool, "
           "or check for shared factors / common modulus across multiple keys.")

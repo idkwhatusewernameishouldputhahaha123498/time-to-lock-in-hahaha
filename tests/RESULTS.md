@@ -3,10 +3,13 @@
 Run `bash tests/run_tests.sh` to reproduce. Self-contained (generated fixtures; no challenge
 files needed). HARD = deterministic assertion (fails the suite); SMOKE = must run without crashing.
 
-## Latest run (Cycle 2, 2026-11-07) — full suite in <1s
+## Latest run (Cycle 3, 2026-11-07) — full suite in ~1.5s
 
 ```
-HARD 20/20 passed; SMOKE 2/2 ok.
+HARD 24/24 passed; SMOKE 2/2 ok.
+Cycle-3 additions lock the two MAJORs the convergence review found: decode_cascade
+bounded on 300KB base58 (O(n^2) decoder capped); flag_grep no ROT-n flood; plus
+malformed-input clean-fail, odd-length NUL recovery, and --wrappers no-truncation.
 
 py_compile all scripts · JSON manifests parse
 prng_sweep minstd0 idx1 == 32285335 · prng_sweep --grep no %100 false-flood (F6)
