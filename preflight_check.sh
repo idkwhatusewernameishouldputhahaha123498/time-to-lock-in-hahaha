@@ -61,6 +61,10 @@ fi
 chk cmd tshark   "tshark"     "$PKG tshark  (mac: brew install wireshark)"
 chk py  py7zr    "py7zr (AES-7z)"   "pip3 install py7zr"
 chk py  pikepdf  "pikepdf"    "pip3 install pikepdf"
+chk cmd mutool   "mutool (PDF streams)" "$PKG mupdf-tools"
+chk cmd qpdf     "qpdf (PDF objects)"   "$PKG qpdf"
+chk cmd sqlite3  "sqlite3 (browser DBs)" "$PKG sqlite3  (usually preinstalled)"
+chk py  lz4      "lz4 (firefox sessionstore)" "pip3 install lz4"
 
 echo "-- Stego --"
 chk cmd steghide "steghide"   "$PKG steghide"
@@ -68,6 +72,8 @@ chk cmd zsteg    "zsteg"      "gem install zsteg"
 chk cmd zbarimg  "zbarimg"    "$PKG zbar-tools  (mac: brew install zbar)"
 chk py  PIL      "Pillow"     "pip3 install Pillow"
 chk py  numpy    "numpy"      "pip3 install numpy"
+chk cmd ffmpeg   "ffmpeg (video stego)" "$PKG ffmpeg"
+chk cmd multimon-ng "multimon-ng (DTMF)" "$PKG multimon-ng"
 
 echo "-- Crypto --"
 chk py  Crypto   "pycryptodome"  "pip3 install pycryptodome"
@@ -98,6 +104,7 @@ chk cmd ffuf     "ffuf"       "$PKG ffuf  (or: go install github.com/ffuf/ffuf/v
 chk cmd gobuster "gobuster"   "$PKG gobuster"
 chk cmd nmap     "nmap"       "$PKG nmap"
 chk cmd sqlmap   "sqlmap"     "$PKG sqlmap  (or pip3 install sqlmap)"
+chk cmd flask-unsign "flask-unsign" "pip3 install flask-unsign"
 
 echo
 if [ "${#MISSING[@]}" -eq 0 ]; then

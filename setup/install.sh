@@ -10,7 +10,7 @@ set -uo pipefail
 PIP_ONLY=0
 [ "${1:-}" = "--pip-only" ] && PIP_ONLY=1
 
-PY_LIBS="pwntools angr py7zr pikepdf pycryptodome numpy Pillow requests sympy z3-solver gmpy2 ROPgadget ropper"
+PY_LIBS="pwntools angr py7zr pikepdf pycryptodome numpy Pillow requests sympy z3-solver gmpy2 ROPgadget ropper flask-unsign lz4"
 
 install_pip() {
   echo "== pip libs =="
@@ -29,7 +29,8 @@ install_mac() {
   fi
   echo "== brew packages =="
   brew install python git curl jq binwalk exiftool p7zip wireshark \
-    steghide zbar radare2 upx binutils gdb nmap ffuf gobuster hashcat john sqlmap || true
+    steghide zbar radare2 upx binutils gdb nmap ffuf gobuster hashcat john sqlmap \
+    ffmpeg mupdf-tools qpdf multimon-ng || true
   echo "zsteg/one_gadget are Ruby gems:"
   gem install zsteg one_gadget 2>/dev/null || echo "   (gem install may need Ruby; optional)"
 }
@@ -39,7 +40,8 @@ install_apt() {
   sudo apt-get update
   sudo apt-get install -y python3 python3-pip git curl jq xxd file binwalk \
     libimage-exiftool-perl foremost p7zip-full tshark steghide zbar-tools \
-    radare2 upx-ucl binutils gdb nmap hashcat john sqlmap ruby || true
+    radare2 upx-ucl binutils gdb nmap hashcat john sqlmap ruby \
+    ffmpeg mupdf-tools qpdf multimon-ng || true
   echo "zsteg/one_gadget via gem:"
   sudo gem install zsteg one_gadget 2>/dev/null || echo "   (optional)"
   echo "ffuf/gobuster: apt may lack them; try 'go install' or snap if needed."
