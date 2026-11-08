@@ -82,6 +82,16 @@ patterns / quiet zone in an editor first.
 **Classic paper ciphers:** tap code (pairs 1-5 → 5x5 grid), leetspeak
 (`4=a 3=e 1=i 0=o 7=t`), uuencode (`begin 644` header → `uudecode`).
 
+**Numbers that are really text / symbol ciphers (the cascade won't catch these):**
+- **Decimal column = ASCII:** a CSV/spreadsheet column of ints in 32-126 is char codes —
+  `''.join(chr(int(v)) for v in column)`. (CyberChef: "From Decimal", LF delimiter.)
+- **IEEE-754 floats hiding bytes:** reinterpret each float as its raw bytes —
+  `b''.join(struct.pack('>f', f) for f in floats)` (try `>d` for doubles, `<f`/`<d` little-endian).
+- **Pigpen / Masonic:** angular grid glyphs (clue often "dusty crypto"/Peanuts) → map to the
+  3×3 + X grids, or dcode.fr Pigpen decoder.
+- **Keyboard-shift:** text looks like fingers shifted one key on QWERTY → dcode.fr "Keyboard Shift
+  Cipher" (auto mode).
+
 ## Manual quick tool
 
 **CyberChef "Magic"** (gchq.github.io/CyberChef) auto-detects and chains recipes —

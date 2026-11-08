@@ -38,6 +38,21 @@ ZW_NAMES = {
 # Unicode TAG block: direct ASCII carrier (also used in emoji tag sequences).
 TAG_START, TAG_END = 0xE0000, 0xE007F
 
+# Variation Selectors ("emoji smuggling"): one invisible selector carries one byte.
+#   byte 0..15  -> U+FE00 + byte      (VS1..VS16)
+#   byte 16..255-> U+E0100 + (byte-16)(Variation Selectors Supplement)
+VS16_START, VS16_END = 0xFE00, 0xFE0F
+VSSUP_START, VSSUP_END = 0xE0100, 0xE01EF
+
+
+def vs_to_byte(cp):
+    if VS16_START <= cp <= VS16_END:
+        return cp - VS16_START            # 0..15
+    if VSSUP_START <= cp <= VSSUP_END:
+        return cp - VSSUP_START + 16      # 16..255
+    return None
+
+
 # A few homoglyphs worth flagging (Cyrillic/Greek look-alikes).
 HOMOGLYPHS = {
     0x0430: "CYRILLIC a", 0x0435: "CYRILLIC e", 0x043E: "CYRILLIC o",
@@ -95,12 +110,15 @@ def main(argv):
     # --- inventory -----------------------------------------------------------
     zw_present = {}
     tag_chars = []
+    vs_chars = []
     homo = {}
     for cp in cps:
         if cp in ZW_NAMES:
             zw_present[cp] = zw_present.get(cp, 0) + 1
         if TAG_START <= cp <= TAG_END:
             tag_chars.append(cp)
+        if vs_to_byte(cp) is not None:
+            vs_chars.append(cp)
         if cp in HOMOGLYPHS:
             homo[cp] = homo.get(cp, 0) + 1
 
@@ -111,11 +129,13 @@ def main(argv):
             print(f"      U+{cp:04X}  x{n:<6}  {ZW_NAMES[cp]}")
     if tag_chars:
         print(f"[*] Unicode TAG-block chars (U+E00xx): {len(tag_chars)}")
+    if vs_chars:
+        print(f"[*] Variation-selector chars (U+FE00-0F / U+E0100-E01EF): {len(vs_chars)}")
     if homo:
         print("[*] HOMOGLYPHS detected (look-alike letters) -- inspect visible text too:")
         for cp, n in sorted(homo.items()):
             print(f"      U+{cp:04X}  x{n}  {HOMOGLYPHS[cp]}")
-    if not zw_present and not tag_chars:
+    if not zw_present and not tag_chars and not vs_chars:
         print("[-] No zero-width or tag characters found. "
               "Try: `grep -P '[\\x{200b}-\\x{200f}\\x{2060}\\x{feff}]'`, or check "
               "whitespace stego (trailing spaces/tabs) and variation selectors.")
@@ -127,6 +147,13 @@ def main(argv):
         decoded = "".join(chr(cp - TAG_START) for cp in tag_chars
                           if 0x20 <= (cp - TAG_START) < 0x7F)
         if report_candidate("TAG-block -> ASCII", decoded):
+            found_any = True
+
+    # --- 1b) Variation selectors -> bytes -----------------------------------
+    if vs_chars:
+        raw = bytes(vs_to_byte(cp) for cp in vs_chars)
+        txt = raw.decode("utf-8", "replace")
+        if report_candidate("variation-selectors -> bytes", txt):
             found_any = True
 
     # --- 2) zero-width binary brute -----------------------------------------
@@ -190,7 +217,7 @@ def main(argv):
             if report_candidate(f"base-{base} packed -> bytes", txt):
                 found_any = True
 
-    if not found_any and (stream or tag_chars):
+    if not found_any and (stream or tag_chars or vs_chars):
         print("[-] No printable/flag decode from the standard schemes. "
               "The payload may use a delimiter symbol, 7-bit packing, or a custom "
               "alphabet -- inspect the U+XXXX sequence above by hand.")

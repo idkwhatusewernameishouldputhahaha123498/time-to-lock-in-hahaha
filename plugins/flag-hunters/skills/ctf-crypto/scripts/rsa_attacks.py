@@ -55,6 +55,11 @@ def decrypt(n, e, c, p, q):
 
 def small_e_root(n, e, c):
     """If m**e < n (low exponent, short message), c == m**e over the integers."""
+    # Only cheap & meaningful for SMALL e: a non-trivial m>=2 needs m**e <= c+k*n < 2**14 * n,
+    # so e < n.bit_length()+15. For larger e (65537, or a Wiener-style ~2048-bit e) the only
+    # root is trivial AND iroot(cand, e) would try to build r**(e-1) (astronomically large) -> hang.
+    if e > n.bit_length() + 14:
+        return None
     for k in range(0, 1 << 14):          # c + k*n might be the true e-th power
         cand = c + k * n
         r = iroot(cand, e)

@@ -16,10 +16,10 @@ Usage:
     python3 -I decode_cascade.py <file>
     python3 -I decode_cascade.py "<blob string>"
     cat blob.txt | python3 -I decode_cascade.py
-    python3 -I decode_cascade.py <file> --pattern 'CTF\\{' --depth 10 --timeout 20 --all
+    python3 -I decode_cascade.py <file> --pattern 'flag\\{' --depth 10 --timeout 20 --all
 
 Flags:
-    --pattern RE   regex for a "hit" (default: flag\\{ ... \\}, case-insensitive)
+    --pattern RE   regex for a "hit"; narrows the default, which matches any TAG{...} (case-insensitive)
     --depth N      max recursion depth (default 12)
     --timeout S    wall-clock budget in seconds (default 20)
     --all          also print promising printable leaves even without a hit
@@ -30,7 +30,9 @@ import urllib.parse as _url
 # ----------------------------------------------------------------------------
 # Config / helpers
 # ----------------------------------------------------------------------------
-DEFAULT_PATTERN = re.compile(r"flag\{[^}]*\}", re.IGNORECASE)
+# Format-agnostic: any short tag (flag, CTF, picoCTF, bctf, HTB, corctf, ...) immediately
+# followed by {...}. Override with --pattern to narrow (e.g. --pattern 'flag\{').
+DEFAULT_PATTERN = re.compile(r"\b[A-Za-z0-9_]{1,20}\{[^{}\r\n]{1,256}\}", re.IGNORECASE)
 PRINTABLE = set(bytes(string.printable, "ascii"))
 B58_ALPH = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 B62_ALPH = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -380,7 +382,7 @@ def main():
               f"({st['nodes']} nodes explored). Narrow the input or raise --timeout.")
     if not hits:
         print("\n[!] No flag found via automatic cascade.")
-        print("    Try: --all to see printable layers, --pattern 'CTF\\{', or")
+        print("    Try: --all to see printable layers (default matches any TAG{...}; --pattern narrows), or")
         print("    CyberChef Magic / manual esolang (Brainfuck, Whitespace, JSFuck) / zbarimg for QR.")
     else:
         print(f"\n[+] {len(hits)} hit(s) found.")

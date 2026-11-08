@@ -66,6 +66,9 @@ Match the strongest signal; when two fit, run both specialists in parallel (see 
 not binary/pwn. An image whose text is readable but encoded → decode (misc/crypto), not stego.
 A log file → forensics. "Looks like noise" audio/image → stego.
 
+### Fast-path (skip the overhead when it's obviously easy)
+If the challenge is trivially identifiable — a single small file, an obvious encoding (base64/hex/rot), a one-step decode — solve it directly; DON'T spend tool calls loading a full category SKILL.md first. Load the category skill only when (a) the first obvious attempt fails, or (b) the challenge is non-trivial (binary/pwn/crypto-with-math/multi-step). Rationale: on easy challenges the skill-read overhead (~2x the tool calls, measured) buys nothing; reserve it for where it pays.
+
 ---
 
 ## 2. The clue-first meta (this is the edge — read `references/clue-first.md`)
@@ -110,6 +113,24 @@ artifact**. Internalize these principles (full detail + war stories in
 - Keep a one-line note of what you've ruled out, so a hint snaps into place instead of restarting.
 - Know when to move on: in a 4–6 hr finals with many flags, a stuck hard challenge is worth less
   than two easy ones you haven't opened yet. Park it, bank others, come back.
+
+### What counts as progress (and when to stop)
+**Progress =** a new verified fact · a hypothesis *eliminated* · a working primitive
+(leak/oracle/decode) · a measured search-space reduction · a reproducible flag candidate · a broad
+unknown replaced by an **exact blocker**.
+**NOT progress =** re-explaining the same output · changing payload punctuation with no new
+mechanism · rerunning an unchanged command · trying an attack the evidence doesn't support ·
+inventing more flags from story themes.
+**After 3 no-progress actions in a row:** do ONE evidence-backed pivot; if a 2nd family also yields
+no new hard evidence → **park it** and bank easier flags; only escalate (harder model / deeper tool)
+when you have an exact blocker *plus* new verified evidence.
+
+### Submission governor (don't burn attempts)
+Before submitting, a candidate must be **reproducible** and **format-valid** (`flag{[A-Za-z0-9_]+}`).
+If few submissions remain: ≤10 attempts → add an independent consistency check; ≤3 attempts → get
+explicit user go-ahead. A **rejected flag is evidence** — record it exactly and never resubmit a
+cosmetic permutation without new derivation. (We verify **offline** first — see §5 and ctf-crypto's
+in-process verifier.)
 
 ---
 

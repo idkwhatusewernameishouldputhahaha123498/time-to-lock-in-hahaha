@@ -173,6 +173,8 @@ b=[d[i:i+16] for i in range(0,len(d),16)];print('dups',len(b)-len(set(b)))" ct.b
    (`pip install hashpumpy` — confirm before installing) — no secret needed.
 4. Unsalted/short → check crackstation.net / hashes.com lookups.
 
+**Wordlists (don't rely on the default):** macOS `/usr/share/dict/words` is the small BSD `web2` list (~235k) and MISSES many real passwords (e.g. "cathouse" — a real eval miss). Before concluding "not a dictionary word", also try `/usr/share/dict/web2a` (compound phrases), `/usr/share/dict/propernames`, and rockyou (`/usr/share/wordlists/rockyou.txt`, or download it). Salted-hash reminder: the salt may be a literal clue word from the prompt, not random.
+
 ## PRNG seed reconstruction (the "Random Encounter" playbook)
 
 When a secret (password, token, key) is an **output of a seeded standard PRNG**,

@@ -123,12 +123,21 @@ binwalk -e file.png             # extra file appended after IEND/EOI?
 pngcheck -v file.png            # PNG chunk-level anomalies, extra chunks
 strings -n 6 file.pdf | grep -iE 'flag|/URI|/JS'
 pdfinfo file.pdf ; pdf-parser.py file.pdf   # objects, streams, metadata
+# PDF: flags hide in COMPRESSED streams & UNREFERENCED objects (strings misses both)
+mutool clean -d -c -m in.pdf out.pdf && strings out.pdf | grep -iE 'flag\{'   # decompress all streams
+python3 -c "import re,zlib,sys;d=open(sys.argv[1],'rb').read();[print(zlib.decompress(s)) \
+ for s in re.findall(rb'stream\r?\n(.*?)\r?\nendstream',d,re.S) if (lambda x:x)(0) or True][:0]" in.pdf
+qpdf --qdf --object-streams=disable in.pdf un.pdf   # explode object streams to inspect each object
+printf '%s' "$(python3 -c "d=open('in.pdf','rb').read();print(d[d.rfind(b'%%EOF')+5:].hex())")"  # post-EOF bytes
+# also: pikepdf to read /Annots link URIs (flag in a URI with \{ \} escapes), check /Producer /Keywords
 # office/docx = a zip: unzip and grep
 unzip -o file.docx -d dx && grep -arE 'flag\{' dx/
 # compare declared vs real: a "png" that is really a zip -> see ARCHIVES
 ```
 WHY: EXIF `Comment`/`Artist`/`XMP`, PDF object metadata, and bytes appended after
 a file's logical end (`IEND`, `FFD9`) are the classic hiding spots.
+WHY: `mutool clean -d` / `qpdf` reveal objects a plain `strings` can't see — FlateDecode content
+streams, object streams, and pages not reachable from `/Pages` (`/Kids`).
 
 ## NETWORK CAPTURE (pcap / pcapng)
 
@@ -154,6 +163,21 @@ In Wireshark GUI: Follow > TCP/HTTP Stream, File > Export Objects, and
 `Statistics > Protocol Hierarchy`. WHY: HTTP/DNS/ICMP and reassembled TCP are the
 usual carriers; exported objects (images, zips) often contain the real flag -
 feed them to the FAST PATH and the ARCHIVES/IMAGE sections.
+
+## USB / HID CAPTURE (keyboard, mouse/pen, LED exfil)
+
+A pcap full of `URB_INTERRUPT` USB packets is a peripheral capture — decode what was typed/drawn.
+```bash
+# keyboard: 8-byte HID reports -> keystrokes (byte0=mods, byte2=keycode, shift=mod&0x22)
+tshark -r cap.pcapng -Y 'usb.transfer_type==0x01' -T fields -e usb.capdata \
+  | python3 -I scripts/hid_keyboard_decode.py -            # add --arrows if up/down arrows are used
+```
+- **Mouse / pen drawing:** 7-byte reports — byte0 button, byte1 mode, bytes2-3 dx (int16 LE),
+  bytes4-5 dy (int16 LE). Accumulate (x,y), draw a line per pen-down segment, skip large jumps
+  (pen lifts), render each mode separately with PIL/numpy. (Pure-numpy, like our stego scripts.)
+- **Caps-Lock-LED Morse exfil:** host→device SET_REPORT control packets toggle the LED
+  (`0x01` off / `0x03` on). Time **between** state changes encodes Morse (>~300 ms = dash, else dot;
+  long gaps = letter/word breaks). Filter `usb.transfer_type==0x02`, host→device.
 
 ## DISK IMAGE (raw / dd / img / E01 / partition)
 
@@ -261,6 +285,7 @@ file, then re-run the FAST PATH on the slice.
 | `scripts/nested_archive_peel.py` | recursively peel nested zip/7z in-memory, harvest passwords from sibling files, show the error-oracle, grep every blob for `flag{` | `python3 -I scripts/nested_archive_peel.py <archive> [wordlist.txt]` |
 | `scripts/zerowidth_decode.py` | extract zero-width / tag-block / homoglyph chars and brute the bit-mappings to printable ASCII / `flag{` | `python3 -I scripts/zerowidth_decode.py <file>` |
 | `scripts/log_filter.py` | AND multiple regex clues over a log, surface the real `flag{}` token, ignore decoy token formats | `python3 -I scripts/log_filter.py <log> -r <re> [-r <re2>] [-e 'Field=(\S+)']` |
+| `scripts/hid_keyboard_decode.py` | decode USB HID keyboard `usb.capdata` into typed text (shift, backspace, optional arrow-key line tracking), grep `flag{` | `tshark -r cap -Y 'usb.transfer_type==0x01' -T fields -e usb.capdata \| python3 -I scripts/hid_keyboard_decode.py -` |
 
 Run with `-I` (isolated): extracted artifacts are UNTRUSTED - a planted
 `json.py`/`zlib.py` in the working dir must not be importable. Keep the scripts in

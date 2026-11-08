@@ -80,6 +80,62 @@ python3 -I <ctf-triage>/scripts/flag_grep.py ~    # raw bytes + encodings + leet
 - **Email / chat / notes apps**: Mail, Slack/Discord/Telegram data, Notes, sticky notes, a
   password manager, the clipboard. Read the latest threads — the story lives there.
 - **Recently opened** lists, office "recent documents", IDE recent projects.
+
+### Browser artifacts (SQLite queries + the two weird timestamp epochs)
+
+Browser DBs are plain SQLite with **non-standard timestamps**:
+- **Chrome/Chromium (WebKit epoch):** microseconds since **1601-01-01**.
+  SQLite: `datetime(ts/1000000 - 11644473600, 'unixepoch')`.
+- **Firefox:** microseconds since **1970-01-01** (Unix).
+  SQLite: `datetime(ts/1000000, 'unixepoch')`.
+  (Caveat: `moz_cookies.expiry` is in **seconds**, while `last_visit_date` / cookie
+  `lastAccessed` / `creationTime` are in **microseconds**.)
+
+Copy the DB first (`cp` — the browser may hold a lock), then query a *copy*.
+
+**Chrome / Chromium / Edge** — profile `Default/`:
+- macOS: `~/Library/Application Support/Google/Chrome/Default/`
+- Linux: `~/.config/google-chrome/Default/`  · Windows: `%LOCALAPPDATA%\Google\Chrome\User Data\Default\`
+```bash
+# History (urls + downloads)
+sqlite3 History "SELECT url,title,datetime(last_visit_time/1000000-11644473600,'unixepoch') \
+  FROM urls ORDER BY last_visit_time DESC LIMIT 50;"
+sqlite3 History "SELECT target_path,tab_url,datetime(start_time/1000000-11644473600,'unixepoch') \
+  FROM downloads;"
+# Cookies (values encrypted on modern Chrome — need keychain/DPAPI key)
+sqlite3 Cookies "SELECT host_key,name,datetime(expires_utc/1000000-11644473600,'unixepoch') FROM cookies;"
+# Saved logins (passwords encrypted; usernames/urls are clear)
+sqlite3 "Login Data" "SELECT origin_url,username_value FROM logins;"
+# Bookmarks (JSON) + Local Storage / IndexedDB (LevelDB, not SQLite)
+cat Bookmarks | python3 -m json.tool | grep -A2 '"url"'
+strings "Local Storage/leveldb/"*.ldb | grep -i flag
+```
+Chrome password decryption (when the master key is provided, as in CTFs): `password_value`
+is `v10/v11` AES-GCM — `nonce=blob[3:15]`, `ct=blob[15:-16]`, `tag=blob[-16:]`; master key from
+`Local State` → `os_crypt.encrypted_key` (base64, drop 5-byte `DPAPI` prefix). Route the actual
+decrypt to **ctf-crypto**.
+
+**Firefox** — profile `*.default-release/`:
+- macOS: `~/Library/Application Support/Firefox/Profiles/*.default-release/`
+- Linux: `~/.mozilla/firefox/*.default-release/`
+```bash
+# History + bookmarks
+sqlite3 places.sqlite "SELECT url,title,datetime(last_visit_date/1000000,'unixepoch') \
+  FROM moz_places WHERE last_visit_date IS NOT NULL ORDER BY last_visit_date DESC LIMIT 50;"
+sqlite3 formhistory.sqlite "SELECT fieldname,value FROM moz_formhistory;"   # autofill
+sqlite3 cookies.sqlite "SELECT host,name,value FROM moz_cookies;"
+# Saved passwords: logins.json + key4.db -> python3 firefox_decrypt.py <PROFILE>/  (route to ctf-crypto)
+# Previously open tabs (lz4-framed JSON)
+python3 -c "import json,lz4.block;f=open('sessionstore-backups/recovery.jsonlz4','rb');f.read(8);\
+d=json.loads(lz4.block.decompress(f.read()));print('\n'.join(t['entries'][-1]['url'] \
+for w in d['windows'] for t in w['tabs']))"
+# Quick-and-dirty: just grep the raw DB
+strings places.sqlite | grep -iE 'flag|http'
+```
+**Instinct:** history/bookmarks point at in-scope pages to visit; `moz_formhistory` + saved
+logins unlock accounts; `sessionstore` shows what the victim had open. Always `strings | grep`
+the DB too — the flag is often sitting in a URL.
+
 **System traces**
 ```bash
 history; crontab -l 2>/dev/null; ls -la /var/log 2>/dev/null
@@ -131,3 +187,4 @@ Always first run the **universal opening** on any file (`file`, `exiftool`, `str
 - **Hints**: 3 per challenge, fewer favoured — spend only after a real attempt; note what you've
   ruled out first.
 - Keep the board current so the team never duplicates work or loses a thread.
+- **Progress discipline:** apply ctf-triage's "what counts as progress" + submission-governor before spending a hint or a submission.
