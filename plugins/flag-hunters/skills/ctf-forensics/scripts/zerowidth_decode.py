@@ -94,6 +94,9 @@ def report_candidate(label, text):
 
 
 def main(argv):
+    if "--help" in argv or "-h" in argv:
+        print(__doc__)
+        return 0
     if len(argv) < 2:
         print(__doc__)
         return 2
