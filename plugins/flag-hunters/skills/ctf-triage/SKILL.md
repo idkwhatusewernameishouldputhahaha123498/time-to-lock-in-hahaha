@@ -42,7 +42,31 @@ discipline and verifying offline before you submit.**
    ```bash
    python3 -I scripts/flag_grep.py FILENAME        # raw bytes + encodings + leet variants
    ```
-   If that prints a flag, you're done. It often isn't, but it costs 2 seconds.
+   If that prints a `flag{...}`, confirm it's the *final* flag and not a mid-chain artifact
+   (see §0.5), then you're done. It costs 2 seconds either way.
+
+---
+
+## 0.5 One challenge, or a step in a chain? (don't mistake a waypoint for the flag)
+
+Flag Hunters is built as **one long investigation**, not a pile of isolated tasks: the finals are a
+**digital murder mystery** where *more flags = more story*, and many individual challenges are
+themselves **multi-stage** — stage 1's output is the *key to stage 2*, not the prize. Before you
+call a thread done, decide which you're holding:
+
+- **The output is itself `flag{...}`** → a real flag. Record it, then (finals) check whether the
+  story now unlocks a *new* lead — a flag is a checkpoint, not necessarily the end.
+- **The output is anything else** — a URL, password, coordinates, a filename, a decoded sentence,
+  another ciphertext/blob → it's a **waypoint**. Do NOT stop and do NOT submit it. Feed it back
+  through the intake (§0) and **re-triage**: the next stage is usually a *different* category than
+  the one you just solved (crypto → a URL → web → a download → forensics …).
+- **Stop condition:** only a *verified* `flag{...}` ends a thread. A clean artifact but no flag
+  means the challenge isn't finished — follow the artifact.
+
+**Finals default:** a whole machine / a story / multiple flags → load **investigation** first; it's
+the spine that carries clues between stages and dispatches each one back here. A single provided
+file with no story → treat it as possibly-multi-stage, but skip the investigation overhead until a
+second stage actually appears.
 
 ---
 

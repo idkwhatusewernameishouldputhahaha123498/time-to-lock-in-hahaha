@@ -16,3 +16,6 @@ __pycache__/
 *_amplified/
 *.spectrogram_*.png
 scratch/
+
+# Challenge files dropped into the workbench - never commit organiser material
+challenges/

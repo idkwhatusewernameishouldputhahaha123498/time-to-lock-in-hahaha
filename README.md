@@ -17,15 +17,19 @@ Flag format: **`flag{...}`** (letters, numbers, underscores only).
 
 ---
 
-## Install — pick what matches finals day (3 options)
+## Install — pick what matches finals day (4 options)
 
-The finals use **provided computers**, so we don't yet know exactly what's on them. All three
-paths work from this one repo; set up #1 for practice now, and you're covered either way.
+The finals use **provided computers**. **Confirmed for FH-2026: those PCs run Claude Code in the
+terminal (no admin password needed) — so Option 1 (plugin) is the finals-day path**, giving you a
+real agent with direct file access to the victim's machine. Option 3 (browser-only claude.ai
+skills) is the fallback if a given PC turns out to be locked down. All four paths work from this one
+repo.
 
 ### 1. As a Claude Code plugin (best — one command, whole team)
-Push this repo to a GitHub the team can reach, then each teammate runs:
+Push this repo to a GitHub the team can reach, then each teammate runs (this repo is
+`arvinth2007-alt/CTF-2026`):
 ```
-/plugin marketplace add <your-org>/flag-hunters-arsenal
+/plugin marketplace add arvinth2007-alt/CTF-2026
 /plugin install flag-hunters@flag-hunters-arsenal
 ```
 Or from a local clone (no GitHub needed):
@@ -42,7 +46,49 @@ cp -r plugins/flag-hunters/skills/* ~/.claude/skills/
 ```
 Each `ctf-*` and `investigation` folder becomes an available skill.
 
-### 3. Paste-in fallback (if there's only a browser / a plain chatbox)
+### 3. Browser-only PC (no admin, no Claude Code install) — claude.ai custom skills
+Do this **before** finals, from any machine; skills attach to your claude.ai account, not the
+device. Each teammate does it on their own account.
+```
+python3 -I setup/build_web_skills.py      # -> dist/claude-ai-skills/*.zip (10 ZIPs)
+```
+1. claude.ai → Settings → Capabilities → turn on **Code execution and file creation**
+   (may be labelled *Create and edit files*).
+2. claude.ai → Customize → Skills → **+** → upload each ZIP, and make sure each is enabled.
+3. On the PC: open claude.ai, start a chat, attach the challenge file, describe the challenge.
+
+The web builds carry a short description (the uploader caps it at 200 characters) and a note
+telling Claude it is in a sandbox that cannot reach live targets, so it hands you PowerShell /
+DevTools commands to run on the PC instead.
+
+**A real agent without an admin install.** Claude Code is not banned at the finals; the PCs
+just can't run installers that need the admin password. Three ways around that, best first:
+
+- **Per-user install on the PC.** The official Windows installer does not need Administrator
+  (`irm https://claude.ai/install.ps1 | iex` in PowerShell; it installs into your user
+  profile). Ask the organisers before installing anything on their machine, and expect that a
+  locked-down lab PC may still block it.
+- **GitHub Codespace workbench (browser tab only).** This repo has a `.devcontainer/`: on
+  github.com open the repo → *Code → Codespaces → Create codespace*. It builds a Linux machine
+  with the CTF tools, Claude Code and this plugin. Run `claude`, sign in, then drag challenge
+  files from the PC into the `challenges/` folder (git-ignored). Create it and sign in the
+  night before; on the day just reopen it from github.com/codespaces.
+- **Claude Code on the web (claude.ai/code).** Also browser-only, but it has no direct file
+  upload (files go in through a GitHub repo) and outputs come back through git. Paste
+  `setup/cloud_env_setup.sh` into the environment's setup script. Skills enabled on claude.ai
+  load there too.
+
+The cloud options work on copies of files you upload and can reach the public internet; they
+cannot see the PC's own disk or anything on the campus network.
+
+> **Finals caveat (read the rulebook).** The finals rulebook says **"NO PERSONAL DEVICES ·
+> COMPUTERS PROVIDED"**, so anything that runs on your own laptop (and any option that needs you to
+> *upload the organisers' challenge files* to a third-party cloud) may be disallowed or out of
+> scope — confirm with the organisers. The safe finals-day path is **Option 3 on the provided PC's
+> browser** (skills live on your claude.ai account, not the device; nothing leaves the PC). Keep
+> the laptop/Codespace/cloud options for the online **prelims** and practice.
+
+### 4. Paste-in fallback (if there's only a plain chatbox)
 Open **`FIELD_PLAYBOOK.md`** and paste it in as context (or load it as a claude.ai Project
 knowledge file). It's a self-contained condensed version of the whole arsenal — the triage tree,
 every category's quick checklist, the pattern table, and the flag rules.
@@ -52,8 +98,16 @@ every category's quick checklist, the pattern table, and the flag rules.
 ## Finals-day first moves
 ```bash
 bash preflight_check.sh      # what's installed on this machine + how to get the rest
-bash setup/install.sh        # only if you're allowed to install (review it first)
+bash setup/install.sh        # macOS / Linux (review it first)
 ```
+**On a Windows PC** (the FH-2026 finals machines) use the PowerShell installer instead — it pulls
+the system tools via winget and the Python libs via pip, no admin password needed:
+```powershell
+powershell -ExecutionPolicy Bypass -File setup\install_windows.ps1
+```
+Pwn/binary-heavy tools (full pwntools, gdb, steghide, zbar, multimon-ng) are weak on native
+Windows — if you expect those, enable WSL Ubuntu the night before (`wsl --install -d Ubuntu`, needs
+admin + reboot) and run `bash setup/install.sh` inside it.
 Then just describe the challenge to Claude (or drop the file / paste the URL). `ctf-triage`
 triggers, classifies, and routes. For the murder mystery, say you're working the victim's
 computer and the `investigation` skill drives.

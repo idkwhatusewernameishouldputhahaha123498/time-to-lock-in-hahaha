@@ -15,7 +15,18 @@ OS="unknown"; PKG=""
 if [ "$(uname)" = "Darwin" ]; then OS="macOS"; PKG="brew install";
 elif have apt-get; then OS="Debian/Ubuntu"; PKG="sudo apt-get install -y";
 elif have dnf; then OS="Fedora"; PKG="sudo dnf install -y";
-elif have pacman; then OS="Arch"; PKG="sudo pacman -S"; fi
+elif have pacman; then OS="Arch"; PKG="sudo pacman -S";
+elif have winget; then OS="Windows"; PKG="winget install -e --id";
+else case "$(uname 2>/dev/null)" in MINGW*|MSYS*|CYGWIN*) OS="Windows"; PKG="winget install -e --id";; esac; fi
+
+if [ "$OS" = "Windows" ]; then
+  echo "== CTF preflight (Windows) =="
+  echo "Windows detected. The hints below use winget ids where one exists; the full installer is:"
+  echo "    powershell -ExecutionPolicy Bypass -File setup/install_windows.ps1"
+  echo "Note: steghide, zbarimg, multimon-ng, john-jumbo, gobuster and full pwntools/gdb are"
+  echo "hard on native Windows -> use WSL Ubuntu (wsl --install) + setup/install.sh for those."
+  echo
+fi
 
 GREEN=$'\033[32m'; RED=$'\033[31m'; YEL=$'\033[33m'; DIM=$'\033[2m'; RST=$'\033[0m'
 MISSING=()

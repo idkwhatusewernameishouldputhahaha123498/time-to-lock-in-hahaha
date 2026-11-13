@@ -56,6 +56,11 @@ else
     Linux)
       if command -v apt-get >/dev/null 2>&1; then install_apt
       else echo "Non-apt Linux: install system pkgs manually (see preflight_check.sh), then:"; fi ;;
+    MINGW*|MSYS*|CYGWIN*)
+      echo "Windows (Git Bash) detected. System tools install via PowerShell + winget, not bash."
+      echo "Run this instead for the full Windows toolchain:"
+      echo "    powershell -ExecutionPolicy Bypass -File setup/install_windows.ps1"
+      echo "Doing the pip libs here now (those work the same on Windows):" ;;
     *) echo "Unknown OS: doing pip libs only." ;;
   esac
   install_pip

@@ -1,0 +1,8 @@
+{
+  "name": "Flag Hunters workbench",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
+  },
+  "postCreateCommand": "bash setup/codespace_bootstrap.sh"
+}

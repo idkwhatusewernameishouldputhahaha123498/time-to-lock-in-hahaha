@@ -46,6 +46,13 @@ Read the **title + filename** as hints — they usually are.
 
 Ambiguous? Try the top 2 in parallel. Clear plain-sight flag? `grep flag{` wins instantly.
 
+**CHAINED / MULTI-STAGE (the default here).** Flag Hunters is one long investigation and many
+challenges are multi-stage. If a solve yields anything that *isn't* `flag{...}` — a URL, password,
+coords, filename, another blob — it's a **waypoint, not the flag**: re-run TRIAGE on it (the next
+stage is usually a different category) and keep going. Only a verified `flag{...}` ends a thread,
+and even a plain-sight one may be a checkpoint that unlocks more story — bank it, then find the
+next lead.
+
 ---
 
 ## CRYPTO
